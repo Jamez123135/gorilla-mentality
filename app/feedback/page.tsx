@@ -42,7 +42,7 @@ export default function FeedbackPage() {
             <p className="mt-2">
               Feedback is sent to{" "}
               <span className="font-semibold text-zinc-200">
-                Gorilla Mentality's inbox, where I read every message personally
+                Gorilla Mentality&apos;s inbox, where I read every message personally
               </span>
               .
             </p>

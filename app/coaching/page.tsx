@@ -57,7 +57,7 @@ export default function CoachingPage() {
               <p className="mt-2">
                 Submissions are sent to{" "}
                 <span className="font-semibold text-zinc-200">
-                    Gorilla Mentality's inbox, where I read every application
+                    Gorilla Mentality&apos;s inbox, where I read every application
                 </span>
                 .
               </p>

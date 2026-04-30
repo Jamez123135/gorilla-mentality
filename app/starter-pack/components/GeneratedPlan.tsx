@@ -1,13 +1,17 @@
+"use client";
+
 import {
   ArrowLeft,
   CalendarDays,
+  Download,
   Dumbbell,
   Flame,
-  Printer,
   Sparkles,
   Utensils,
 } from "lucide-react";
+import { useState } from "react";
 import { foodBank, goalLabels } from "@/app/lib/starter-pack/plan-generator";
+import { createStarterPlanPdf } from "@/app/lib/starter-pack/pdf-export";
 import type { Goal, StarterPlan } from "@/app/types/starter-pack";
 
 export function GeneratedPlan({
@@ -21,6 +25,39 @@ export function GeneratedPlan({
   days: number;
   onAdjust: () => void;
 }) {
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
+
+  async function handleSavePdf() {
+    setIsSavingPdf(true);
+
+    try {
+      const blob = createStarterPlanPdf(plan, goal, days);
+      const filename = `${plan.firstName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "gorilla"}-starter-plan.pdf`;
+      const file = new File([blob], filename, { type: "application/pdf" });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: plan.title,
+          text: "Your Gorilla Mentality starter plan PDF.",
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setIsSavingPdf(false);
+    }
+  }
+
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-950/65 p-5 shadow-[0_45px_140px_-90px_rgba(255,255,255,0.3)] backdrop-blur md:p-8">
       <div className="flex flex-col gap-5 border-b border-zinc-800 pb-7 md:flex-row md:items-start md:justify-between">
@@ -63,11 +100,12 @@ export function GeneratedPlan({
 
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={handleSavePdf}
+          disabled={isSavingPdf}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-bold text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-zinc-200 active:scale-[0.98]"
         >
-          <Printer className="h-4 w-4" aria-hidden="true" />
-          Print plan
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {isSavingPdf ? "Preparing PDF..." : "Save PDF"}
         </button>
       </div>
     </section>
