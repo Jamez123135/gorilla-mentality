@@ -31,28 +31,28 @@ export function GeneratedPlan({
     setIsSavingPdf(true);
 
     try {
-      const blob = createStarterPlanPdf(plan, goal, days);
+      const blob = await createStarterPlanPdf(plan, goal, days);
       const filename = `${plan.firstName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "gorilla"}-starter-plan.pdf`;
       const file = new File([blob], filename, { type: "application/pdf" });
+      const shouldUseMobileShare =
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
 
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: plan.title,
-          text: "Your Gorilla Mentality starter plan PDF.",
-        });
-        return;
+      if (shouldUseMobileShare && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: plan.title,
+            text: "Your Gorilla Mentality starter plan PDF.",
+          });
+          return;
+        } catch {
+          downloadPdf(blob, filename);
+          return;
+        }
       }
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadPdf(blob, filename);
     } finally {
       setIsSavingPdf(false);
     }
@@ -110,6 +110,20 @@ export function GeneratedPlan({
       </div>
     </section>
   );
+}
+
+function downloadPdf(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function PlanMetric({ label, value }: { label: string; value: string }) {

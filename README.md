@@ -68,6 +68,43 @@ from structured data and deterministic rules.
 The easiest way to extend the plan system is to edit the data first, then the
 rules only when the decision logic needs to change.
 
+## Branded PDF Export
+
+The starter-pack plan can be saved as a designed Gorilla Mentality PDF from the
+generated-plan screen.
+
+The export uses `pdf-lib`, not browser print. That means the app builds an
+actual PDF file in JavaScript instead of asking the phone or computer to print
+the web page. This is why it works better on mobile.
+
+PDF flow:
+
+1. The user clicks `Save PDF` in
+   `app/starter-pack/components/GeneratedPlan.tsx`.
+2. The component calls `createStarterPlanPdf()` in
+   `app/lib/starter-pack/pdf-export.ts`.
+3. `pdf-export.ts` creates a new PDF with:
+   - branded dark cover page
+   - Gorilla Mentality title treatment
+   - goal, training-days, calories, and protein cards
+   - training routine pages
+   - meal guide pages
+   - page numbers and branded footer text
+4. The PDF is returned to the browser as a `Blob`.
+5. On desktop, the app forces a normal file download.
+6. On mobile, the app uses the native share/save sheet when the browser
+   supports file sharing. If sharing fails, it falls back to direct download.
+
+To change the PDF design, edit `app/lib/starter-pack/pdf-export.ts`.
+
+Common PDF edits:
+
+- Change brand colors: update the `colors` object.
+- Change margins/page size: update `pageSize`, `margin`, and `contentWidth`.
+- Change cover layout: edit `drawCoverPage()`.
+- Change workout cards: edit `drawTraining()`.
+- Change meal-plan output: edit `drawMealGuide()`.
+
 ## Editing Common Things
 
 - Add or change exercises: edit `app/data/starter-pack/training.ts`.
@@ -75,6 +112,7 @@ rules only when the decision logic needs to change.
 - Change form labels: edit `app/data/starter-pack/options.ts`.
 - Change landing page copy: edit `app/data/site.ts`.
 - Change shared header/footer links: edit `app/data/site.ts`.
+- Change branded PDF output: edit `app/lib/starter-pack/pdf-export.ts`.
 
 ## Scripts
 

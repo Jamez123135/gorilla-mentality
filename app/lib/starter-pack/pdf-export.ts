@@ -1,183 +1,681 @@
+import {
+  PDFDocument,
+  PDFPage,
+  PDFFont,
+  RGB,
+  StandardFonts,
+  rgb,
+} from "pdf-lib";
 import { goalLabels } from "@/app/lib/starter-pack/plan-generator";
 import type { Goal, StarterPlan } from "@/app/types/starter-pack";
 
-const pageWidth = 595;
-const pageHeight = 842;
-const marginX = 48;
-const firstLineY = 790;
-const lineHeight = 15;
-const linesPerPage = 48;
-const wrapAt = 88;
+type PdfFonts = {
+  regular: PDFFont;
+  bold: PDFFont;
+};
 
-export function createStarterPlanPdf(plan: StarterPlan, goal: Goal, days: number) {
-  const pages = paginateLines(buildPlanLines(plan, goal, days));
-  const pdf = buildPdfDocument(pages);
+type PdfContext = {
+  pdf: PDFDocument;
+  page: PDFPage;
+  fonts: PdfFonts;
+  y: number;
+  pageNumber: number;
+};
 
-  return new Blob([pdf], { type: "application/pdf" });
+const pageSize: [number, number] = [612, 792];
+const pageWidth = pageSize[0];
+const pageHeight = pageSize[1];
+const margin = 46;
+const contentWidth = pageWidth - margin * 2;
+
+const colors = {
+  black: rgb(0.035, 0.035, 0.04),
+  panel: rgb(0.075, 0.075, 0.085),
+  panelSoft: rgb(0.11, 0.11, 0.125),
+  border: rgb(0.24, 0.24, 0.27),
+  white: rgb(0.96, 0.96, 0.94),
+  muted: rgb(0.63, 0.63, 0.66),
+  faint: rgb(0.42, 0.42, 0.46),
+  accent: rgb(0.86, 0.86, 0.82),
+};
+
+export async function createStarterPlanPdf(
+  plan: StarterPlan,
+  goal: Goal,
+  days: number,
+) {
+  const pdf = await PDFDocument.create();
+  const fonts = {
+    regular: await pdf.embedFont(StandardFonts.Helvetica),
+    bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+  };
+
+  const cover = pdf.addPage(pageSize);
+  drawCoverPage(cover, fonts, plan, goal, days);
+
+  const context: PdfContext = {
+    pdf,
+    page: addContentPage(pdf, fonts, "Calorie Intake Goal", 2),
+    fonts,
+    y: 690,
+    pageNumber: 2,
+  };
+
+  drawCalorieIntakeGoal(context, plan, goal, days);
+  nextPage(context, "Workout Plan");
+  drawWorkout(context, plan, goal);
+  nextPage(context, "Diet Recommendations");
+  drawDietRecommendations(context, plan);
+
+  const bytes = await pdf.save();
+  const pdfBytes = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+
+  return new Blob([pdfBytes], { type: "application/pdf" });
 }
 
-function buildPlanLines(plan: StarterPlan, goal: Goal, days: number) {
-  const lines: string[] = [
-    "GORILLA MENTALITY STARTER PLAN",
-    plan.title,
-    "",
-    `Goal: ${goalLabels[goal]}`,
-    `Training days: ${days}`,
-    `Split: ${plan.splitLabel}`,
-    `Calories: ${plan.nutrition.calories}`,
-    `Protein: ${plan.nutrition.proteinMin}-${plan.nutrition.proteinMax}g`,
-    "",
-    "TRAINING TARGETS",
-    `Cardio: ${plan.trainingAdjustment.cardio}`,
-    `Movement: ${plan.trainingAdjustment.steps}`,
-    `Effort: ${plan.trainingAdjustment.effort}`,
-    `Progression: ${plan.setGuidance}`,
-    "",
-    "TRAINING ROUTINE",
-  ];
-
-  plan.selectedSessions.forEach((session, index) => {
-    lines.push("");
-    lines.push(`Day ${index + 1}: ${session.title}`);
-    lines.push(session.intent);
-    lines.push(`Warm-up: ${session.warmup}`);
-    session.exercises.forEach((exercise) => {
-      lines.push(`- ${exercise.name}: ${exercise.details}`);
-    });
-    lines.push(`Finish: ${session.finisher}`);
+function drawCoverPage(
+  page: PDFPage,
+  fonts: PdfFonts,
+  plan: StarterPlan,
+  goal: Goal,
+  days: number,
+) {
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    height: pageHeight,
+    color: colors.black,
   });
 
-  lines.push("");
-  lines.push("MEAL GUIDE");
-  lines.push(
+  page.drawRectangle({
+    x: 34,
+    y: 34,
+    width: pageWidth - 68,
+    height: pageHeight - 68,
+    borderColor: colors.border,
+    borderWidth: 1,
+  });
+
+  drawMonogram(page, fonts, margin, 682, 58);
+  drawText(page, "GORILLA MENTALITY", margin + 76, 712, 18, fonts.bold);
+  drawText(page, "Train with purpose.", margin + 76, 692, 11, fonts.regular, colors.muted);
+
+  drawWrappedText(
+    page,
+    plan.title,
+    margin,
+    575,
+    contentWidth,
+    38,
+    fonts.bold,
+    colors.white,
+    44,
+  );
+
+  drawText(
+    page,
+    "A structured starter routine and meal guide generated from your intake.",
+    margin,
+    498,
+    13,
+    fonts.regular,
+    colors.muted,
+  );
+
+  const cardY = 385;
+  drawStatCard(page, fonts, margin, cardY, "Goal", titleCase(goalLabels[goal]));
+  drawStatCard(page, fonts, margin + 176, cardY, "Days", `${days} / week`);
+  drawStatCard(page, fonts, margin + 352, cardY, "Calories", `${plan.nutrition.calories}`);
+
+  drawStatCard(
+    page,
+    fonts,
+    margin,
+    cardY - 112,
+    "Protein",
+    `${plan.nutrition.proteinMin}-${plan.nutrition.proteinMax}g`,
+  );
+  drawStatCard(page, fonts, margin + 176, cardY - 112, "Split", plan.splitLabel, 330);
+
+  page.drawLine({
+    start: { x: margin, y: 118 },
+    end: { x: pageWidth - margin, y: 118 },
+    thickness: 1,
+    color: colors.border,
+  });
+  drawText(page, "Generated by Gorilla Mentality", margin, 91, 11, fonts.bold, colors.white);
+  drawText(page, "Use this plan as a starting point. Adjust for injuries, medical needs, and real-life recovery.", margin, 73, 9, fonts.regular, colors.muted);
+}
+
+function drawCalorieIntakeGoal(
+  context: PdfContext,
+  plan: StarterPlan,
+  goal: Goal,
+  days: number,
+) {
+  drawSectionTitle(context, "Calories Intake Goal");
+  drawInfoGrid(context, [
+    ["Daily calories", `${plan.nutrition.calories}`],
+    ["Daily protein", `${plan.nutrition.proteinMin}-${plan.nutrition.proteinMax}g`],
+    ["Primary goal", titleCase(goalLabels[goal])],
+    ["Training split", `${days} days per week`],
+    ["Sample meals", `${plan.mealTotals.calories} cal / ${plan.mealTotals.protein}g protein`],
+    ["Routine style", plan.splitLabel],
+  ]);
+
+  drawSectionTitle(context, "Weekly Focus");
+  drawCallout(context, "Cardio", plan.trainingAdjustment.cardio);
+  drawCallout(context, "Movement", plan.trainingAdjustment.steps);
+  drawCallout(context, "Effort", plan.trainingAdjustment.effort);
+  drawCallout(context, "Progression", plan.setGuidance);
+}
+
+function drawWorkout(context: PdfContext, plan: StarterPlan, goal: Goal) {
+  drawSectionTitle(context, "Workout");
+
+  plan.selectedSessions.forEach((session, index) => {
+    const sessionHeight = measureSessionHeight(context, session);
+
+    ensureSpace(context, sessionHeight + 24);
+
+    const topY = context.y;
+    drawCardBackground(
+      context.page,
+      margin,
+      topY - sessionHeight,
+      contentWidth,
+      sessionHeight,
+      colors.panel,
+    );
+
+    drawText(
+      context.page,
+      `Day ${index + 1}: ${session.title}`,
+      margin + 16,
+      topY - 24,
+      14,
+      context.fonts.bold,
+      colors.white,
+    );
+    drawText(
+      context.page,
+      goal === "muscle" ? "60-75 min" : "75-90 min",
+      pageWidth - margin - 70,
+      topY - 22,
+      9,
+      context.fonts.bold,
+      colors.accent,
+    );
+
+    context.y = topY - 48;
+
+    context.y = drawWrappedText(
+      context.page,
+      session.intent,
+      margin + 16,
+      context.y,
+      contentWidth - 32,
+      10,
+      context.fonts.regular,
+      colors.muted,
+    ) - 14;
+
+    context.y = drawWrappedText(
+      context.page,
+      `Warm-up: ${session.warmup}`,
+      margin + 16,
+      context.y,
+      contentWidth - 32,
+      10,
+      context.fonts.bold,
+      colors.white,
+    ) - 16;
+
+    session.exercises.forEach((exercise) => {
+      drawText(
+        context.page,
+        exercise.name,
+        margin + 22,
+        context.y,
+        10,
+        context.fonts.bold,
+        colors.white,
+      );
+      context.y = drawWrappedText(
+        context.page,
+        exercise.details,
+        margin + 36,
+        context.y - 15,
+        contentWidth - 58,
+        9,
+        context.fonts.regular,
+        colors.muted,
+      ) - 12;
+    });
+
+    context.y = drawWrappedText(
+      context.page,
+      `Finish: ${session.finisher}`,
+      margin + 16,
+      context.y,
+      contentWidth - 32,
+      10,
+      context.fonts.bold,
+      colors.accent,
+    );
+
+    context.y = topY - sessionHeight - 26;
+  });
+}
+
+function drawDietRecommendations(context: PdfContext, plan: StarterPlan) {
+  drawSectionTitle(context, "Diet Recommendations");
+  drawCallout(
+    context,
+    "Nutrition rules",
     "High protein, whole foods, portion control, no fried foods or added oils, no processed foods, zero sugar, and no alcohol.",
   );
 
+  drawCallout(
+    context,
+    "Daily target",
+    `${plan.nutrition.calories} calories with ${plan.nutrition.proteinMin}-${plan.nutrition.proteinMax}g protein. Use the meal examples as a template, then adjust portions to match the target.`,
+  );
+
   plan.meals.forEach((meal) => {
-    lines.push("");
-    lines.push(`${meal.title}: ${meal.calories} calories / ${meal.protein}g protein`);
-    meal.items.forEach((item) => lines.push(`- ${item}`));
+    const mealHeight = measureMealHeight(context, meal);
+
+    ensureSpace(context, mealHeight + 24);
+
+    const topY = context.y;
+    drawCardBackground(
+      context.page,
+      margin,
+      topY - mealHeight,
+      contentWidth,
+      mealHeight,
+      colors.panel,
+    );
+
+    drawText(
+      context.page,
+      meal.title,
+      margin + 16,
+      topY - 24,
+      13,
+      context.fonts.bold,
+      colors.white,
+    );
+    drawText(
+      context.page,
+      `${meal.calories} cal / ${meal.protein}g protein`,
+      pageWidth - margin - 128,
+      topY - 23,
+      9,
+      context.fonts.bold,
+      colors.accent,
+    );
+
+    context.y = topY - 50;
+
+    meal.items.forEach((item) => {
+      context.y = drawWrappedText(
+        context.page,
+        `- ${item}`,
+        margin + 22,
+        context.y,
+        contentWidth - 44,
+        10,
+        context.fonts.regular,
+        colors.muted,
+      ) - 8;
+    });
+
+    context.y = topY - mealHeight - 24;
   });
 
-  lines.push("");
-  lines.push(
-    `Sample day total: ${plan.mealTotals.calories} calories and ${plan.mealTotals.protein}g protein.`,
+  drawCallout(
+    context,
+    "Adjustments",
+    "Use serving sizes to bring the sample day up or down to your target. Add or remove rice, potato, oats, fruit, or lean protein first.",
   );
-  lines.push(
-    "Adjust serving sizes by adding or removing rice, potato, oats, fruit, or lean protein first.",
-  );
-
-  return lines.flatMap((line) => wrapLine(line));
 }
 
-function wrapLine(line: string) {
-  if (!line) return [""];
+function measureSessionHeight(
+  context: PdfContext,
+  session: StarterPlan["selectedSessions"][number],
+) {
+  const intentLines = countWrappedLines(
+    session.intent,
+    contentWidth - 32,
+    10,
+    context.fonts.regular,
+  );
+  const warmupLines = countWrappedLines(
+    `Warm-up: ${session.warmup}`,
+    contentWidth - 32,
+    10,
+    context.fonts.bold,
+  );
+  const exerciseHeight = session.exercises.reduce((total, exercise) => {
+    const detailsLines = countWrappedLines(
+      exercise.details,
+      contentWidth - 58,
+      9,
+      context.fonts.regular,
+    );
 
-  const words = line.split(" ");
-  const wrapped: string[] = [];
+    return total + 27 + detailsLines * 13;
+  }, 0);
+  const finisherLines = countWrappedLines(
+    `Finish: ${session.finisher}`,
+    contentWidth - 32,
+    10,
+    context.fonts.bold,
+  );
+
+  return (
+    70 +
+    intentLines * 14 +
+    14 +
+    warmupLines * 14 +
+    16 +
+    exerciseHeight +
+    finisherLines * 14 +
+    24
+  );
+}
+
+function measureMealHeight(
+  context: PdfContext,
+  meal: StarterPlan["meals"][number],
+) {
+  const itemsHeight = meal.items.reduce((total, item) => {
+    const lines = countWrappedLines(
+      `- ${item}`,
+      contentWidth - 44,
+      10,
+      context.fonts.regular,
+    );
+
+    return total + lines * 14 + 8;
+  }, 0);
+
+  return 62 + itemsHeight + 24;
+}
+
+function addContentPage(
+  pdf: PDFDocument,
+  fonts: PdfFonts,
+  title: string,
+  pageNumber: number,
+) {
+  const page = pdf.addPage(pageSize);
+  page.drawRectangle({ x: 0, y: 0, width: pageWidth, height: pageHeight, color: colors.black });
+  page.drawRectangle({ x: 0, y: pageHeight - 86, width: pageWidth, height: 86, color: colors.panel });
+  drawMonogram(page, fonts, margin, pageHeight - 66, 34);
+  drawText(page, "GORILLA MENTALITY", margin + 48, pageHeight - 48, 12, fonts.bold, colors.white);
+  drawRightAlignedText(
+    page,
+    title.toUpperCase(),
+    pageWidth - margin,
+    pageHeight - 47,
+    8,
+    fonts.bold,
+    colors.faint,
+  );
+  drawFooter(page, fonts, pageNumber);
+  return page;
+}
+
+function nextPage(context: PdfContext, title = "Starter Plan") {
+  context.pageNumber += 1;
+  context.page = addContentPage(context.pdf, context.fonts, title, context.pageNumber);
+  context.y = 690;
+}
+
+function ensureSpace(context: PdfContext, needed: number) {
+  if (context.y - needed < 78) nextPage(context);
+}
+
+function drawSectionTitle(context: PdfContext, title: string) {
+  ensureSpace(context, 58);
+  drawText(context.page, title.toUpperCase(), margin, context.y, 15, context.fonts.bold, colors.white);
+  context.page.drawLine({
+    start: { x: margin, y: context.y - 9 },
+    end: { x: pageWidth - margin, y: context.y - 9 },
+    thickness: 1,
+    color: colors.border,
+  });
+  context.y -= 34;
+}
+
+function drawInfoGrid(context: PdfContext, items: [string, string][]) {
+  const cardWidth = (contentWidth - 14) / 2;
+  const rowHeight = 76;
+
+  for (let index = 0; index < items.length; index += 2) {
+    ensureSpace(context, rowHeight + 10);
+
+    items.slice(index, index + 2).forEach(([label, value], column) => {
+      const x = margin + column * (cardWidth + 14);
+
+      drawCardBackground(
+        context.page,
+        x,
+        context.y - 58,
+        cardWidth,
+        64,
+        colors.panel,
+      );
+      drawText(
+        context.page,
+        label.toUpperCase(),
+        x + 14,
+        context.y - 14,
+        8,
+        context.fonts.bold,
+        colors.faint,
+      );
+      drawWrappedText(
+        context.page,
+        value,
+        x + 14,
+        context.y - 34,
+        cardWidth - 28,
+        11,
+        context.fonts.bold,
+        colors.white,
+        13,
+      );
+    });
+
+    context.y -= rowHeight;
+  }
+
+  context.y -= 10;
+}
+
+function drawCallout(context: PdfContext, title: string, body: string) {
+  ensureSpace(context, 82);
+  const startY = context.y;
+  drawCardBackground(context.page, margin, startY - 56, contentWidth, 70, colors.panel);
+  drawText(context.page, title, margin + 16, startY - 4, 12, context.fonts.bold, colors.white);
+  const endY = drawWrappedText(
+    context.page,
+    body,
+    margin + 16,
+    startY - 24,
+    contentWidth - 32,
+    10,
+    context.fonts.regular,
+    colors.muted,
+  );
+  context.y = Math.min(endY - 24, startY - 82);
+}
+
+function drawStatCard(
+  page: PDFPage,
+  fonts: PdfFonts,
+  x: number,
+  y: number,
+  label: string,
+  value: string,
+  width = 154,
+) {
+  drawCardBackground(page, x, y, width, 82, colors.panel);
+  drawText(page, label.toUpperCase(), x + 15, y + 52, 8, fonts.bold, colors.faint);
+  drawWrappedText(page, value, x + 15, y + 31, width - 30, 15, fonts.bold, colors.white, 16);
+}
+
+function drawCardBackground(
+  page: PDFPage,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: RGB,
+) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color,
+    borderColor: colors.border,
+    borderWidth: 1,
+  });
+}
+
+function drawMonogram(
+  page: PDFPage,
+  fonts: PdfFonts,
+  x: number,
+  y: number,
+  size: number,
+) {
+  page.drawRectangle({
+    x,
+    y,
+    width: size,
+    height: size,
+    color: colors.white,
+  });
+  drawText(page, "GM", x + size * 0.18, y + size * 0.35, size * 0.28, fonts.bold, colors.black);
+}
+
+function drawFooter(page: PDFPage, fonts: PdfFonts, pageNumber: number) {
+  page.drawLine({
+    start: { x: margin, y: 48 },
+    end: { x: pageWidth - margin, y: 48 },
+    thickness: 1,
+    color: colors.border,
+  });
+  drawText(page, "Gorilla Mentality - Train with purpose.", margin, 30, 9, fonts.bold, colors.muted);
+  drawText(page, `Page ${pageNumber}`, pageWidth - margin - 44, 30, 9, fonts.regular, colors.muted);
+}
+
+function drawText(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  font: PDFFont,
+  color = colors.white,
+) {
+  page.drawText(sanitize(text), { x, y, size, font, color });
+}
+
+function drawRightAlignedText(
+  page: PDFPage,
+  text: string,
+  rightX: number,
+  y: number,
+  size: number,
+  font: PDFFont,
+  color = colors.white,
+) {
+  const cleanText = sanitize(text);
+  const width = font.widthOfTextAtSize(cleanText, size);
+
+  page.drawText(cleanText, {
+    x: rightX - width,
+    y,
+    size,
+    font,
+    color,
+  });
+}
+
+function drawWrappedText(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  size: number,
+  font: PDFFont,
+  color = colors.white,
+  leading = size + 4,
+) {
+  const lines = wrapText(sanitize(text), maxWidth, size, font);
+  lines.forEach((line, index) => {
+    page.drawText(line, {
+      x,
+      y: y - index * leading,
+      size,
+      font,
+      color,
+    });
+  });
+  return y - lines.length * leading;
+}
+
+function wrapText(text: string, maxWidth: number, size: number, font: PDFFont) {
+  const words = text.split(" ");
+  const lines: string[] = [];
   let current = "";
 
   words.forEach((word) => {
     const next = current ? `${current} ${word}` : word;
-    if (next.length <= wrapAt) {
+    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
       current = next;
       return;
     }
 
-    if (current) wrapped.push(current);
+    if (current) lines.push(current);
     current = word;
   });
 
-  if (current) wrapped.push(current);
-  return wrapped;
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
 }
 
-function paginateLines(lines: string[]) {
-  const pages: string[][] = [];
-
-  for (let index = 0; index < lines.length; index += linesPerPage) {
-    pages.push(lines.slice(index, index + linesPerPage));
-  }
-
-  return pages.length ? pages : [["Gorilla Mentality starter plan"]];
+function countWrappedLines(
+  text: string,
+  maxWidth: number,
+  size: number,
+  font: PDFFont,
+) {
+  return wrapText(sanitize(text), maxWidth, size, font).length;
 }
 
-function buildPdfDocument(pages: string[][]) {
-  const objects: string[] = [];
-  const pageObjectIds: number[] = [];
-
-  objects.push("<< /Type /Catalog /Pages 2 0 R >>");
-  objects.push("");
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-
-  pages.forEach((pageLines, index) => {
-    const pageId = 4 + index * 2;
-    const contentId = pageId + 1;
-    pageObjectIds.push(pageId);
-
-    const stream = buildPageStream(pageLines, index + 1, pages.length);
-    objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`,
-    );
-    objects.push(`<< /Length ${byteLength(stream)} >>\nstream\n${stream}\nendstream`);
-  });
-
-  objects[1] =
-    `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`;
-
-  return assemblePdf(objects);
-}
-
-function buildPageStream(lines: string[], pageNumber: number, pageCount: number) {
-  const escapedLines = lines.map(escapePdfText);
-  const textLines = escapedLines
-    .map((line) => `(${line}) Tj T*`)
-    .join("\n");
-
-  return [
-    "BT",
-    "/F1 11 Tf",
-    `${lineHeight} TL`,
-    `${marginX} ${firstLineY} Td`,
-    textLines,
-    "ET",
-    "BT",
-    "/F1 9 Tf",
-    `${marginX} 32 Td`,
-    `(Gorilla Mentality - Page ${pageNumber} of ${pageCount}) Tj`,
-    "ET",
-  ].join("\n");
-}
-
-function assemblePdf(objects: string[]) {
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-
-  objects.forEach((object, index) => {
-    offsets.push(byteLength(pdf));
-    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-  });
-
-  const xrefOffset = byteLength(pdf);
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += "0000000000 65535 f \n";
-  offsets.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
-  });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-
-  return pdf;
-}
-
-function escapePdfText(value: string) {
+function sanitize(value: string) {
   return value
     .normalize("NFKD")
     .replace(/[^\x20-\x7E]/g, "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function byteLength(value: string) {
-  return new TextEncoder().encode(value).length;
+function titleCase(value: string) {
+  return value
+    .split(/[\s-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
