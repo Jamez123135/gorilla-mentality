@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/app/lib/supabase";
+import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Loader2, Lock, Mail } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
+  const { signIn, isLoaded } = useSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,21 +16,28 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoaded) return;
+
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      if (result.status === "complete") {
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        setError("Additional verification required.");
+      }
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

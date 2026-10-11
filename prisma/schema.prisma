@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id                 String   @id // This will be the Clerk User ID
+  updatedAt          DateTime @updatedAt
+  username           String?  @unique
+  fullName           String?
+  avatarUrl          String?
+  
+  // Intake Data
+  sex                String?  // 'male' or 'female'
+  goal               String?  // 'fat loss', 'muscle gain', 'recomp'
+  currentWeight      Float?
+  targetWeight       Float?
+  trainingExperience String?
+  trainingDays       Int?
+  
+  // Nutrition Targets
+  targetCalories     Int?
+  targetProtein      Int?
+  
+  // Relations
+  workoutLogs        WorkoutLog[]
+  nutritionLogs      NutritionLog[]
+  progressPhotos     ProgressPhoto[]
+
+  @@map("profiles")
+}
+
+model Exercise {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  name         String   @unique
+  muscleGroup  String
+  equipment    String?
+  instructions String?
+  isActive     Boolean  @default(true)
+  
+  // Relations
+  workoutTemplates WorkoutTemplate[]
+  workoutLogs      WorkoutLog[]
+
+  @@map("exercises")
+}
+
+model WorkoutTemplate {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  templateName String
+  dayNumber    Int
+  orderIndex    Int
+  defaultSets   Int
+  defaultReps   String
+  notes        String?
+  
+  // Relations
+  exercise    Exercise @relation(fields: [exerciseId], references: [id])
+  exerciseId  String
+
+  @@map("workout_templates")
+}
+
+model WorkoutLog {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  userId       String
+  exerciseId   String
+  weight       Float?
+  reps         Int?
+  setNumber    Int
+  workoutDate  DateTime @default(now())
+  isCompleted  Boolean  @default(false)
+  
+  // Relations
+  profile      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise     Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("workout_logs")
+}
+
+model NutritionLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  userId     String
+  logDate    DateTime @default(now())
+  calories   Int?
+  protein    Int?
+  
+  // Relations
+  profile    Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, logDate])
+  @@map("nutrition_logs")
+}
+
+model ProgressPhoto {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  url       String
+  label     String?
+  
+  // Relations
+  profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("progress_photos")
+}

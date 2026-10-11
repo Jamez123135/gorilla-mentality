@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1416aaf0-e4c3-4e3f-9ca4-3d5f00e7efff" name="Changes" comment="Project" />
+    <list default="true" id="1416aaf0-e4c3-4e3f-9ca4-3d5f00e7efff" name="Changes" comment="Project">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -21,12 +23,12 @@
   <component name="GitHubPullRequestSearchHistory"><![CDATA[{
   "lastFilter": {}
 }]]></component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;git@github.com:Jamez123135/gorilla-mentality-app.git&quot;,
-    &quot;accountId&quot;: &quot;3d804783-3b70-439a-a6ba-3ab1da220410&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Jamez123135/gorilla-mentality.git",
+    "accountId": "3d804783-3b70-439a-a6ba-3ab1da220410"
   }
-}</component>
+}]]></component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />

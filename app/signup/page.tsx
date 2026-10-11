@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/app/lib/supabase";
+import { useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Loader2, Lock, Mail, User } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SignupPage() {
+  const { isLoaded, signUp } = useSignUp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -16,27 +17,24 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoaded) return;
+
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+    try {
+      await signUp.create({
+        emailAddress: email,
+        password,
+        // Clerk handles metadata differently; we'll save the full name to the DB in the intake flow
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      // Supabase by default requires email confirmation.
-      // If you disable it in settings, the user is logged in immediately.
       setError("Check your email for the confirmation link to activate your account!");
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "An error occurred during signup");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

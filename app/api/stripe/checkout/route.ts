@@ -16,17 +16,16 @@ export async function POST(req: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "Gorilla Premium Subscription",
-              description: "Full access to the Gorilla Hub, Workout Logger, and Nutrition Tracker",
+              name: "One-on-One Gorilla Coaching Deposit",
+              description: "Initial consultation and onboarding fee to secure your spot in the elite coaching program.",
             },
-            unit_amount: 2900, // $29.00
-            recurring: { interval: "month" },
+            unit_amount: 14900, // $149.00
           },
           quantity: 1,
         },
       ],
-      mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/dashboard?success=true`,
+      mode: "payment",
+      success_url: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/dashboard?success=coaching`,
       cancel_url: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/pricing`,
     });
 

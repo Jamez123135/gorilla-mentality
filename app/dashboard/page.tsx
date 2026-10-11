@@ -1,48 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/app/lib/supabase";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { LayoutDashboard, Dumbbell, Utensils, User, LogOut, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
+  const { user, isLoaded } = useUser();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    async function getSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
+    async function fetchProfile() {
+      if (!isLoaded || !user) return;
+
+      try {
+        const res = await fetch(`/api/profile?id=${user.id}`);
+        const data = await res.json();
+        setProfile(data);
+      } catch (e) {
+        console.error("Profile fetch error:", e);
+      } finally {
+        setLoading(false);
       }
-
-      setUser(session.user);
-
-      // Fetch profile data
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      setProfile(profileData);
-      setLoading(false);
     }
 
-    getSession();
-  }, [router]);
+    fetchProfile();
+  }, [user, isLoaded]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-yellow-500"></div>
@@ -62,15 +50,15 @@ export default function Dashboard() {
 
         <nav className="flex-1 px-4 space-y-2">
           <NavItem icon={<LayoutDashboard />} label="Overview" active />
-          <NavItem icon={<Dumbbell />} label="Workouts" />
-          <NavItem icon={<Utensils />} label="Nutrition" />
-          <NavItem icon={<TrendingUp />} label="Progress" />
+          <NavItem icon={<Dumbbell />} label="Workouts" href="/dashboard/workouts" />
+          <NavItem icon={<Utensils />} label="Nutrition" href="/dashboard/nutrition" />
+          <NavItem icon={<TrendingUp />} label="Progress" href="/dashboard/progress" />
           <NavItem icon={<User />} label="Profile" />
         </nav>
 
         <div className="p-4 border-t border-zinc-800">
           <button 
-            onClick={handleLogout}
+            onClick={() => router.push("/login")} // Simplification for now, Clerk has signOut
             className="flex items-center gap-3 w-full p-3 text-zinc-400 hover:text-white transition-colors rounded-xl hover:bg-zinc-800"
           >
             <LogOut className="w-5 h-5" />
@@ -82,7 +70,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="mb-8">
-          <h2 className="text-3xl font-bold">Welcome back, {profile?.full_name || "Warrior"}</h2>
+          <h2 className="text-3xl font-bold">Welcome back, {profile?.fullName || user?.fullName || "Warrior"}</h2>
           <p className="text-zinc-400">Here is your Gorilla Mentality status.</p>
         </header>
 
@@ -94,12 +82,12 @@ export default function Dashboard() {
           />
           <StatCard 
             label="Daily Calories" 
-            value={profile?.target_calories ? `${profile.target_calories} kcal` : "---"} 
+            value={profile?.targetCalories ? `${profile.targetCalories} kcal` : "---"} 
             subtext="Target Intake" 
           />
           <StatCard 
             label="Daily Protein" 
-            value={profile?.target_protein ? `${profile.target_protein}g` : "---"} 
+            value={profile?.targetProtein ? `${profile.targetProtein}g` : "---"} 
             subtext="Muscle Growth" 
           />
         </div>
@@ -110,7 +98,10 @@ export default function Dashboard() {
           <p className="text-zinc-400 mb-6 max-w-md">
             Time to hit the jungle. Start your session to track your progressive overload.
           </p>
-          <button className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all uppercase tracking-wider">
+          <button 
+            onClick={() => router.push("/dashboard/workouts")}
+            className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all uppercase tracking-wider"
+          >
             Start Workout
           </button>
         </div>
@@ -119,10 +110,10 @@ export default function Dashboard() {
   );
 }
 
-function NavItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
+function NavItem({ icon, label, active = false, href = "#" }: { icon: React.ReactNode, label: string, active?: boolean, href?: string }) {
   return (
     <a 
-      href="#" 
+      href={href} 
       className={`flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${
         active ? "bg-yellow-500 text-black" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
       }`}

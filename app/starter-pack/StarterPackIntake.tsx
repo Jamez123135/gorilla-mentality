@@ -11,10 +11,11 @@ import type { IntakeForm } from "@/app/types/starter-pack";
 import { GeneratedPlan } from "./components/GeneratedPlan";
 import { PlanStepper } from "./components/PlanStepper";
 import { StarterPackForm } from "./components/StarterPackForm";
-import { supabase } from "@/app/lib/supabase";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function StarterPackIntake() {
+  const { user } = useUser();
   const [form, setForm] = useState<IntakeForm>(initialIntakeForm);
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,26 +30,24 @@ export default function StarterPackIntake() {
     setLoading(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session) {
-        // If user is logged in, persist their intake data to their profile
-        const { error } = await supabase
-          .from("profiles")
-          .upsert({
-            id: session.user.id,
+      if (user) {
+        // Sync with Neon DB via our new API route
+        await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: user.id,
+            fullName: user.fullName,
             sex: form.sex,
             goal: form.goal,
-            current_weight: form.weight,
-            training_days: form.days,
-            training_experience: form.experience,
+            currentWeight: parseFloat(form.weight),
+            trainingDays: form.days,
+            trainingExperience: form.experience,
             // Calculate and save nutrition targets
-            target_calories: plan.nutrition.calories,
-            target_protein: plan.nutrition.protein,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (error) console.error("Error syncing profile:", error);
+            targetCalories: plan.nutrition.calories,
+            targetProtein: plan.nutrition.protein,
+          }),
+        });
       }
     } catch (e) {
       console.error("Sync error:", e);
