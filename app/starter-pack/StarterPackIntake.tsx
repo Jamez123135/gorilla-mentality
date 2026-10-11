@@ -11,19 +11,52 @@ import type { IntakeForm } from "@/app/types/starter-pack";
 import { GeneratedPlan } from "./components/GeneratedPlan";
 import { PlanStepper } from "./components/PlanStepper";
 import { StarterPackForm } from "./components/StarterPackForm";
+import { supabase } from "@/app/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function StarterPackIntake() {
   const [form, setForm] = useState<IntakeForm>(initialIntakeForm);
   const [generated, setGenerated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // The form is the only source of truth. The plan is derived from it, which
   // keeps state predictable and prevents stale generated output.
   const plan = useMemo(() => createStarterPlan(form), [form]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setGenerated(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setLoading(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // If user is logged in, persist their intake data to their profile
+        const { error } = await supabase
+          .from("profiles")
+          .upsert({
+            id: session.user.id,
+            sex: form.sex,
+            goal: form.goal,
+            current_weight: form.weight,
+            training_days: form.days,
+            training_experience: form.experience,
+            // Calculate and save nutrition targets
+            target_calories: plan.nutrition.calories,
+            target_protein: plan.nutrition.protein,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) console.error("Error syncing profile:", error);
+      }
+    } catch (e) {
+      console.error("Sync error:", e);
+    } finally {
+      setLoading(false);
+      setGenerated(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function updateForm<Key extends keyof IntakeForm>(
@@ -111,6 +144,7 @@ export default function StarterPackIntake() {
               form={form}
               onSubmit={handleSubmit}
               onChange={updateForm}
+              isLoading={loading}
             />
           ) : (
             <GeneratedPlan
