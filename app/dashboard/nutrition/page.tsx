@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/app/lib/supabase";
 import { motion } from "framer-motion";
-import { Utensils, Plus, Minus, Save, CheckCircle2, Flame, Protein } from "lucide-react";
+import { Utensils, Plus, Minus, Save, CheckCircle2, Flame, Dumbbell } from "lucide-react";
 
 interface DailyLog {
   calories: number;
@@ -156,7 +155,7 @@ export default function NutritionTracker() {
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-blue-500/20 rounded-2xl">
-              <Protein className="w-6 h-6 text-blue-500" />
+              <Dumbbell className="w-6 h-6 text-blue-500" />
             </div>
             <h3 className="text-xl font-bold">Protein (g)</h3>
           </div>

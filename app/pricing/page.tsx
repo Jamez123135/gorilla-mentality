@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion }, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Check, Send, Trophy, Star, Shield, User, Target } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 

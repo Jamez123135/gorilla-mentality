@@ -1,6 +1,6 @@
-import { authMiddleware } from "@clerk/nextjs";
+import { clerkMiddleware } from "@clerk/nextjs";
 
-export default authMiddleware({
+export default clerkMiddleware({
   // Routes that can be accessed by anyone, including signed-out users
   publicRoutes: ["/", "/starter-pack", "/pricing", "/login", "/signup", "/api/stripe/checkout"],
 });
