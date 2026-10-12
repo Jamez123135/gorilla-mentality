@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Utensils, Plus, Minus, Save, CheckCircle2, Flame, Dumbbell } from "lucide-react";
+import { getNutritionData, saveNutritionLog } from "@/app/lib/actions/nutrition";
 
 interface DailyLog {
   calories: number;
@@ -19,29 +20,19 @@ export default function NutritionTracker() {
   useEffect(() => {
     async function fetchNutritionData() {
       setLoading(true);
-      
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .single();
+      try {
+        const data = await getNutritionData();
+        setProfile(data.profile);
 
-      setProfile(profileData);
-
-      const today = new Date().toISOString().split('T')[0];
-      const { data: logData } = await supabase
-        .from("nutrition_logs")
-        .select("*")
-        .eq("user_id", profileData?.id)
-        .eq("log_date", today)
-        .single();
-
-      if (logData) {
-        setCurrentLog({ 
-          calories: logData.calories || 0, 
-          protein: logData.protein || 0 
-        });
+        if (data.log) {
+          setCurrentLog({
+            calories: data.log.calories || 0,
+            protein: data.log.protein || 0
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching nutrition data:", e);
       }
-
       setLoading(false);
     }
 
@@ -58,20 +49,7 @@ export default function NutritionTracker() {
   const saveNutrition = async () => {
     setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const today = new Date().toISOString().split('T')[0];
-      const { error } = await supabase
-        .from("nutrition_logs")
-        .upsert({
-          user_id: session.user.id,
-          log_date: today,
-          calories: currentLog.calories,
-          protein: currentLog.protein,
-        });
-
-      if (error) throw error;
+      await saveNutritionLog(currentLog.calories, currentLog.protein);
       alert("Nutrition logged for today!");
     } catch (e) {
       console.error(e);
@@ -84,8 +62,8 @@ export default function NutritionTracker() {
   if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading Nutrition...</div>;
   if (!profile) return <div className="min-h-screen bg-black text-white flex items-center justify-center">No profile found. Please complete the intake.</div>;
 
-  const calProgress = Math.min(100, (currentLog.calories / (profile.target_calories || 1)) * 100);
-  const proProgress = Math.min(100, (currentLog.protein / (profile.target_protein || 1)) * 100);
+  const calProgress = Math.min(100, (currentLog.calories / (profile.targetCalories || 1)) * 100);
+  const proProgress = Math.min(100, (currentLog.protein / (profile.targetProtein || 1)) * 100);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8">
@@ -96,7 +74,7 @@ export default function NutritionTracker() {
           </h1>
           <p className="text-zinc-500">Track your daily intake vs Gorilla targets</p>
         </div>
-        <button 
+        <button
           onClick={saveNutrition}
           disabled={saving}
           className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all disabled:opacity-50"
@@ -108,7 +86,7 @@ export default function NutritionTracker() {
 
       <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Calories Card */}
-        <motion.div 
+        <motion.div
           whileHover={{ y: -5 }}
           className="p-8 rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl"
         >
@@ -121,11 +99,11 @@ export default function NutritionTracker() {
 
           <div className="text-center mb-8">
             <span className="text-5xl font-black">{currentLog.calories}</span>
-            <span className="text-zinc-500 text-xl ml-2">/ {profile.target_calories}</span>
+            <span className="text-zinc-500 text-xl ml-2">/ {profile.targetCalories}</span>
           </div>
 
           <div className="w-full bg-zinc-800 h-4 rounded-full mb-8 overflow-hidden">
-            <motion.div 
+            <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${calProgress}%` }}
               className="h-full bg-orange-500"
@@ -133,13 +111,13 @@ export default function NutritionTracker() {
           </div>
 
           <div className="flex justify-center gap-4">
-            <button 
+            <button
               onClick={() => adjustValue("calories", -100)}
               className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-all"
             >
               <Minus className="w-6 h-6" />
             </button>
-            <button 
+            <button
               onClick={() => adjustValue("calories", 100)}
               className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-all"
             >
@@ -149,7 +127,7 @@ export default function NutritionTracker() {
         </motion.div>
 
         {/* Protein Card */}
-        <motion.div 
+        <motion.div
           whileHover={{ y: -5 }}
           className="p-8 rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl"
         >
@@ -162,11 +140,11 @@ export default function NutritionTracker() {
 
           <div className="text-center mb-8">
             <span className="text-5xl font-black">{currentLog.protein}</span>
-            <span className="text-zinc-500 text-xl ml-2">/ {profile.target_protein}</span>
+            <span className="text-zinc-500 text-xl ml-2">/ {profile.targetProtein}</span>
           </div>
 
           <div className="w-full bg-zinc-800 h-4 rounded-full mb-8 overflow-hidden">
-            <motion.div 
+            <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${proProgress}%` }}
               className="h-full bg-blue-500"
@@ -174,13 +152,13 @@ export default function NutritionTracker() {
           </div>
 
           <div className="flex justify-center gap-4">
-            <button 
+            <button
               onClick={() => adjustValue("protein", -10)}
               className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-all"
             >
               <Minus className="w-6 h-6" />
             </button>
-            <button 
+            <button
               onClick={() => adjustValue("protein", 10)}
               className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-all"
             >
