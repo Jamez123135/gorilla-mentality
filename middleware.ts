@@ -1,8 +1,18 @@
-import { clerkMiddleware } from "@clerk/nextjs";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs";
 
-export default clerkMiddleware({
-  // Routes that can be accessed by anyone, including signed-out users
-  publicRoutes: ["/", "/starter-pack", "/pricing", "/login", "/signup", "/api/stripe/checkout"],
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/starter-pack(.*)",
+  "/pricing(.*)",
+  "/login(.*)",
+  "/signup(.*)",
+  "/api/stripe/checkout(.*)",
+]);
+
+export default clerkMiddleware((auth, request) => {
+  if (!isPublicRoute(request)) {
+    auth().protect();
+  }
 });
 
 export const config = {
