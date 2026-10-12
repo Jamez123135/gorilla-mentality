@@ -1,129 +1,164 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/app/lib/supabase";
-import { motion } from "framer-motion";
-import { Camera, Trash2, Upload, CheckCircle2 } from "lucide-react";
-
-interface Photo {
-  id: string;
-  url: string;
-  created_at: string;
-  label: string;
-}
+import Image from "next/image";
+import { Camera, Trash2, Upload } from "lucide-react";
+import { requestJson } from "@/app/lib/http";
+import { preparePhoto } from "@/app/lib/prepare-photo";
+import type { ProgressPhoto } from "@/app/types/dashboard";
+import { WeightTracker } from "./WeightTracker";
 
 export default function ProgressVault() {
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
-    async function fetchPhotos() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("progress_photos")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (data) setPhotos(data);
-      setLoading(false);
-    }
-    fetchPhotos();
+    let active = true;
+    requestJson<ProgressPhoto[]>("/api/progress")
+      .then((data) => {
+        if (active) setPhotos(data);
+      })
+      .catch(() => {
+        if (active)
+          setError("Unable to load your photos. Please refresh to try again.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
-    
+  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || uploading) return;
     setUploading(true);
-    const file = e.target.files[0];
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
+    setError(null);
+    setMessage(null);
     try {
-      // 1. Upload to Supabase Storage
-      const fileName = `${session.user.id}/${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("progress-photos")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("progress-photos")
-        .getPublicUrl(fileName);
-
-      // 3. Save to Database
-      const { error: dbError } = await supabase
-        .from("progress_photos")
-        .insert({
-          user_id: session.user.id,
-          url: publicUrl,
-          label: "Progress Update",
-        });
-
-      if (dbError) throw dbError;
-      
-      // Refresh list
-      const { data: updatedPhotos } = await supabase
-        .from("progress_photos")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (updatedPhotos) setPhotos(updatedPhotos);
-      alert("Photo added to the vault!");
-    } catch (e) {
-      console.error(e);
-      alert("Upload failed");
+      const body = new FormData();
+      body.append("photo", await preparePhoto(file), "progress.jpg");
+      const photo = await requestJson<ProgressPhoto>("/api/progress", {
+        method: "POST",
+        body,
+      });
+      setPhotos((current) => [photo, ...current]);
+      setMessage("Photo saved.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Upload failed. Please try again.",
+      );
     } finally {
       setUploading(false);
     }
-  };
+  }
 
-  if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading Vault...</div>;
+  async function removePhoto(id: string) {
+    if (deleting || !window.confirm("Delete this progress photo?")) return;
+    setDeleting(id);
+    setError(null);
+    setMessage(null);
+    try {
+      await requestJson(`/api/progress/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      setPhotos((current) => current.filter((photo) => photo.id !== id));
+      setMessage("Photo deleted.");
+    } catch {
+      setError("Unable to delete this photo. Please try again.");
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8">
-      <header className="max-w-5xl mx-auto flex justify-between items-end mb-8">
+    <main className="mx-auto max-w-5xl p-4 md:p-8">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter">
+          <h1 className="text-3xl font-black">
             Progress <span className="text-yellow-500">Vault</span>
           </h1>
-          <p className="text-zinc-500">Evidence of the grind. Store your growth.</p>
+          <p className="mt-2 text-zinc-400">
+            Your transformation, one photo at a time.
+          </p>
         </div>
-        
-        <label className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all cursor-pointer">
-          {uploading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Upload className="w-5 h-5" />}
+        <label
+          className={`flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black cursor-pointer ${uploading || loading ? "opacity-50" : "hover:bg-yellow-400"}`}
+        >
+          <Upload className="h-5 w-5" />
           {uploading ? "Uploading..." : "Add Photo"}
-          <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
+          <input
+            type="file"
+            className="sr-only"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploading || loading}
+            onChange={handleUpload}
+            aria-label="Add progress photo"
+          />
         </label>
       </header>
-
-      <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {photos.length === 0 ? (
-          <div className="col-span-full py-20 text-center bg-zinc-900 rounded-3xl border border-zinc-800 border-dashed">
-            <Camera className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-            <p className="text-zinc-500">Your vault is empty. Start documenting your transformation.</p>
-          </div>
-        ) : (
-          photos.map((photo) => (
-            <motion.div 
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              key={photo.id} 
-              className="group relative aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800"
+      <WeightTracker />
+      <h2 className="mb-4 text-xl font-semibold">Progress Photos</h2>
+      {error && (
+        <p role="alert" className="mb-4 text-red-400">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="mb-4 text-green-400">
+          {message}
+        </p>
+      )}
+      {loading ? (
+        <p role="status" className="text-zinc-400">
+          Loading photos...
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {!photos.length && !error && (
+            <div className="col-span-full py-16 text-center text-zinc-400">
+              <Camera className="mx-auto mb-4 h-12 w-12" />
+              <p>Your vault is empty.</p>
+            </div>
+          )}
+          {photos.map((photo) => (
+            <figure
+              key={photo.id}
+              className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
             >
-              <img src={photo.url} alt="Progress" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <p className="text-xs font-medium text-zinc-300">
-                  {new Date(photo.created_at).toLocaleDateString()}
-                </p>
+              <div className="relative aspect-square">
+                <Image
+                  unoptimized
+                  src={photo.url}
+                  alt={photo.label || "Progress photo"}
+                  fill
+                  sizes="(max-width: 1024px) 50vw, 33vw"
+                  className="object-cover"
+                />
               </div>
-            </motion.div>
-          ))
-        )}
-      </div>
-    </div>
+              <figcaption className="flex items-center justify-between gap-2 p-3 text-sm text-zinc-400">
+                <span>{new Date(photo.createdAt).toLocaleDateString()}</span>
+                <button
+                  onClick={() => removePhoto(photo.id)}
+                  disabled={deleting !== null}
+                  aria-label="Delete progress photo"
+                  title="Delete photo"
+                  className="shrink-0 rounded-lg p-2 hover:bg-zinc-800 hover:text-red-400 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+    </main>
   );
 }

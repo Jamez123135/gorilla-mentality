@@ -39,6 +39,9 @@ export function SiteFooter() {
             <Link href="/feedback" className="text-zinc-400 hover:text-white">
               Feedback
             </Link>
+            <Link href="/dashboard" className="text-zinc-400 hover:text-white">
+              Member Area
+            </Link>
           </div>
         </div>
       </div>

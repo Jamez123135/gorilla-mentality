@@ -52,24 +52,24 @@ export default function CoachingPage() {
               check-in plan can be tailored to your goal, schedule, gym access,
               and lifestyle.
             </p>
+            <p className="mt-4 text-sm text-zinc-400">
+              One-on-one coaching is a paid service. We will discuss your plan
+              and payment directly after your application. Membership and
+              tracking tools are free.
+            </p>
             <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-sm text-zinc-400">
               <p className="font-bold text-zinc-100">Where it goes</p>
               <p className="mt-2">
                 Submissions are sent to{" "}
                 <span className="font-semibold text-zinc-200">
-                    Gorilla Mentality&apos;s inbox, where I read every application
+                  Gorilla Mentality&apos;s inbox, where I read every application
                 </span>
                 .
               </p>
-
             </div>
           </aside>
 
-          <form
-            action={formAction}
-            method="POST"
-            className="space-y-5"
-          >
+          <form action={formAction} method="POST" className="space-y-5">
             {/* FormSubmit configuration. Swap this action for a custom API later if needed. */}
             <input
               type="hidden"
@@ -93,7 +93,11 @@ export default function CoachingPage() {
                 type="email"
                 required
               />
-              <RadioGroup label="Age range" name="age_range" options={ageRanges} />
+              <RadioGroup
+                label="Age range"
+                name="age_range"
+                options={ageRanges}
+              />
               <RadioGroup
                 label="Sex"
                 name="sex"
@@ -193,7 +197,11 @@ export default function CoachingPage() {
               title="Nutrition and lifestyle"
               description="Short notes on meals, habits, and check-ins make the plan easier to follow."
             >
-              <RadioGroup label="Diet style" name="diet_style" options={dietStyles} />
+              <RadioGroup
+                label="Diet style"
+                name="diet_style"
+                options={dietStyles}
+              />
               <TextArea
                 label="Food allergies / foods you avoid"
                 name="food_allergies_avoid"

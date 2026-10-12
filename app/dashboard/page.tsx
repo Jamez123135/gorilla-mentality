@@ -1,138 +1,210 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { LayoutDashboard, Dumbbell, Utensils, User, LogOut, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import {
+  Dumbbell,
+  Utensils,
+  TrendingUp,
+  ArrowRight,
+  MessageSquare,
+} from "lucide-react";
+import { getDashboard } from "@/app/lib/actions/dashboard";
+import { localDate } from "@/app/lib/validation";
 
 export default function Dashboard() {
-  const { user, isLoaded } = useUser();
-  const [profile, setProfile] = useState<any>(null);
+  const { user } = useUser();
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof getDashboard>
+  > | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    async function fetchProfile() {
-      if (!isLoaded || !user) return;
-
-      try {
-        const res = await fetch(`/api/profile?id=${user.id}`);
-        const data = await res.json();
-        setProfile(data);
-      } catch (e) {
-        console.error("Profile fetch error:", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProfile();
-  }, [user, isLoaded]);
-
-  if (!isLoaded || loading) {
+    let active = true;
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    getDashboard(localDate(today), start.toISOString(), end.toISOString())
+      .then((result) => {
+        if (active) setData(result);
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "Unable to load your dashboard. Please refresh to try again.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (loading)
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-yellow-500"></div>
-      </div>
+      <p role="status" className="p-8 text-zinc-400">
+        Loading dashboard...
+      </p>
     );
-  }
-
+  const profile = data?.profile;
+  const suggestions = [
+    !profile?.trainingDays
+      ? {
+          title: "Set your routine",
+          text: "Choose your goal, training days, and nutrition targets.",
+          href: "/starter-pack",
+        }
+      : null,
+    !data?.mealCount
+      ? {
+          title: "Log your first meal today",
+          text: "Keep your food diary up to date.",
+          href: "/dashboard/nutrition",
+        }
+      : null,
+    !data?.workoutsThisWeek
+      ? {
+          title: "Start this week's training",
+          text: "Record weights and reps as you train.",
+          href: "/dashboard/workouts",
+        }
+      : null,
+    !data?.latestWeight
+      ? {
+          title: "Record your starting weight",
+          text: "Build your progress history over time.",
+          href: "/dashboard/progress",
+        }
+      : null,
+  ].filter((item) => item !== null);
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-black italic uppercase tracking-tighter">
-            Gorilla <span className="text-yellow-500">Hub</span>
-          </h1>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-2">
-          <NavItem icon={<LayoutDashboard />} label="Overview" active />
-          <NavItem icon={<Dumbbell />} label="Workouts" href="/dashboard/workouts" />
-          <NavItem icon={<Utensils />} label="Nutrition" href="/dashboard/nutrition" />
-          <NavItem icon={<TrendingUp />} label="Progress" href="/dashboard/progress" />
-          <NavItem icon={<User />} label="Profile" />
-        </nav>
-
-        <div className="p-4 border-t border-zinc-800">
-          <button 
-            onClick={() => router.push("/login")} // Simplification for now, Clerk has signOut
-            className="flex items-center gap-3 w-full p-3 text-zinc-400 hover:text-white transition-colors rounded-xl hover:bg-zinc-800"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sign Out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-8">
-          <h2 className="text-3xl font-bold">Welcome back, {profile?.fullName || user?.fullName || "Warrior"}</h2>
-          <p className="text-zinc-400">Here is your Gorilla Mentality status.</p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard 
-            label="Current Goal" 
-            value={profile?.goal || "Not Set"} 
-            subtext="Focus Area" 
-          />
-          <StatCard 
-            label="Daily Calories" 
-            value={profile?.targetCalories ? `${profile.targetCalories} kcal` : "---"} 
-            subtext="Target Intake" 
-          />
-          <StatCard 
-            label="Daily Protein" 
-            value={profile?.targetProtein ? `${profile.targetProtein}g` : "---"} 
-            subtext="Muscle Growth" 
-          />
-        </div>
-
-        <div className="mt-12 p-8 rounded-3xl bg-zinc-900 border border-zinc-800 border-dashed flex flex-col items-center justify-center text-center">
-          <Dumbbell className="w-12 h-12 text-yellow-500 mb-4" />
-          <h3 className="text-xl font-bold mb-2">No active workout logged today</h3>
-          <p className="text-zinc-400 mb-6 max-w-md">
-            Time to hit the jungle. Start your session to track your progressive overload.
-          </p>
-          <button 
-            onClick={() => router.push("/dashboard/workouts")}
-            className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all uppercase tracking-wider"
-          >
-            Start Workout
-          </button>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function NavItem({ icon, label, active = false, href = "#" }: { icon: React.ReactNode, label: string, active?: boolean, href?: string }) {
-  return (
-    <a 
-      href={href} 
-      className={`flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${
-        active ? "bg-yellow-500 text-black" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </a>
-  );
-}
-
-function StatCard({ label, value, subtext }: { label: string, value: string, subtext: string }) {
-  return (
-    <motion.div 
-      whileHover={{ y: -5 }}
-      className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl"
-    >
-      <p className="text-zinc-500 text-sm font-medium">{label}</p>
-      <h4 className="text-2xl font-black my-1">{value}</h4>
-      <p className="text-zinc-600 text-xs uppercase tracking-widest">{subtext}</p>
-    </motion.div>
+    <main className="mx-auto max-w-6xl p-4 md:p-8">
+      <header className="mb-8">
+        <p className="text-xs font-semibold uppercase text-yellow-500">
+          Free Membership
+        </p>
+        <h1 className="mt-2 break-words text-3xl font-bold">
+          Welcome back, {profile?.fullName || user?.firstName || "Warrior"}
+        </h1>
+        <p className="mt-2 text-zinc-400">
+          {profile?.goal
+            ? `Goal: ${profile.goal.replace("-", " ")}`
+            : "Your training, meals, and progress."}
+        </p>
+      </header>
+      {error && (
+        <p role="alert" className="mb-6 text-red-400">
+          {error}
+        </p>
+      )}
+      {data && (
+        <>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6 border-y border-zinc-800 py-6 lg:grid-cols-4">
+            {[
+              [
+                "Workouts This Week",
+                String(data.workoutsThisWeek),
+                profile?.trainingDays
+                  ? `${profile.trainingDays}-day routine`
+                  : "Routine not set",
+              ],
+              [
+                "Today's Calories",
+                `${data.totals.calories} kcal`,
+                profile?.targetCalories
+                  ? `Target ${profile.targetCalories} kcal`
+                  : "Target not set",
+              ],
+              [
+                "Today's Protein",
+                `${Math.round(data.totals.protein)}g`,
+                profile?.targetProtein
+                  ? `Target ${profile.targetProtein}g`
+                  : "Target not set",
+              ],
+              [
+                "Latest Weight",
+                data.latestWeight ? `${data.latestWeight} lb` : "Not logged",
+                "Body-weight history",
+              ],
+            ].map(([label, value, detail]) => (
+              <div key={label}>
+                <p className="text-sm text-zinc-400">{label}</p>
+                <p className="mt-2 break-words text-2xl font-bold">{value}</p>
+                <p className="mt-1 text-xs text-zinc-500">{detail}</p>
+              </div>
+            ))}
+          </div>
+          <nav aria-label="Quick actions" className="flex flex-wrap gap-3 py-6">
+            {[
+              {
+                label: "Log Workout",
+                href: "/dashboard/workouts",
+                icon: Dumbbell,
+              },
+              {
+                label: "Log Meal",
+                href: "/dashboard/nutrition",
+                icon: Utensils,
+              },
+              {
+                label: "Track Progress",
+                href: "/dashboard/progress",
+                icon: TrendingUp,
+              },
+            ].map(({ label, href, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-3 text-sm font-semibold hover:border-yellow-500"
+              >
+                <Icon className="h-5 w-5 text-yellow-500" />
+                {label}
+              </Link>
+            ))}
+          </nav>
+          {suggestions.length > 0 && (
+            <section className="border-t border-zinc-800 py-6">
+              <h2 className="mb-2 text-xl font-semibold">Next Steps</h2>
+              <div className="divide-y divide-zinc-800">
+                {suggestions.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center justify-between gap-4 py-4"
+                  >
+                    <div>
+                      <h3 className="font-medium">{item.title}</h3>
+                      <p className="mt-1 text-sm text-zinc-400">{item.text}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 shrink-0 text-yellow-500" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+      <section className="border-t border-zinc-800 py-6">
+        <h2 className="text-xl font-semibold">One-on-one Coaching</h2>
+        <p className="mt-2 max-w-xl text-sm text-zinc-400">
+          For personal coaching, reach out to Gorilla Mentality. Your plan and
+          payment are arranged directly.
+        </p>
+        <Link
+          href="/coaching"
+          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-yellow-500"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Apply for coaching
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+    </main>
   );
 }

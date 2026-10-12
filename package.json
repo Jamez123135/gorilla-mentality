@@ -4,33 +4,45 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "prisma generate && npm run db:deploy && next build",
     "start": "next start",
     "lint": "eslint",
-    "prisma:seed": "npx ts-node prisma/seed.ts"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "prisma:seed": "tsx --env-file=.env.local prisma/seed.ts",
+    "db:check": "tsx --env-file=.env.local scripts/check-database.ts",
+    "db:deploy": "node scripts/deploy-database.mjs",
+    "db:local": "node scripts/local-database.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "7.9.14",
+    "@clerk/shared": "4.40.0",
     "@prisma/client": "5.22.0",
-    "@stripe/stripe-js": "^10.0.0",
     "framer-motion": "^12.29.2",
     "lucide-react": "^0.563.0",
-    "next": "16.1.4",
+    "next": "16.4.0",
     "pdf-lib": "^1.17.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "stripe": "^23.0.0",
+    "sharp": "^0.35.5",
     "zod": "^4.6.6"
   },
   "devDependencies": {
+    "@clerk/backend": "3.23.2",
+    "@clerk/testing": "^2.2.45",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.7",
+    "embedded-postgres": "^18.4.0-beta.17",
     "eslint": "^9",
-    "eslint-config-next": "16.1.4",
+    "eslint-config-next": "16.4.0",
     "prisma": "5.22.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

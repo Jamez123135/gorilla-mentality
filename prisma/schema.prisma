@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Profile {
-  id                 String   @id // Clerk User ID
-  updatedAt          DateTime @updatedAt
-  username           String?  @unique
-  fullName           String?
-  avatarUrl          String?
-  
+  id        String   @id // Clerk User ID
+  updatedAt DateTime @updatedAt
+  username  String?  @unique
+  fullName  String?
+  avatarUrl String?
+
   // Intake Data
   sex                String?
   goal               String?
@@ -21,32 +21,34 @@ model Profile {
   targetWeight       Float?
   trainingExperience String?
   trainingDays       Int?
-  
+
   // Nutrition Targets
-  targetCalories     Int?
-  targetProtein      Int?
-  
+  targetCalories Int?
+  targetProtein  Int?
+
   // Relations
-  workoutLogs        WorkoutLog[]
-  nutritionLogs      NutritionLog[]
-  progressPhotos     ProgressPhoto[]
-  applications       CoachingApplication[]
+  workoutLogs    WorkoutLog[]
+  nutritionLogs  NutritionLog[]
+  progressPhotos ProgressPhoto[]
+  applications   CoachingApplication[]
+  mealEntries    MealEntry[]
+  weightEntries  WeightEntry[]
 
   @@map("profiles")
 }
 
 model CoachingApplication {
-  id            String   @id @default(uuid())
-  createdAt     DateTime @default(now())
-  userId        String
-  fullName      String
-  email         String
-  currentGoal   String
-  experience    String
-  message       String
-  status        String   @default("pending") // pending, approved, rejected
-  
-  profile       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  userId      String
+  fullName    String
+  email       String
+  currentGoal String
+  experience  String
+  message     String
+  status      String   @default("pending") // pending, approved, rejected
+
+  profile Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("coaching_applications")
 }
@@ -59,7 +61,7 @@ model Exercise {
   equipment    String?
   instructions String?
   isActive     Boolean  @default(true)
-  
+
   workoutTemplates WorkoutTemplate[]
   workoutLogs      WorkoutLog[]
 
@@ -71,43 +73,43 @@ model WorkoutTemplate {
   createdAt    DateTime @default(now())
   templateName String
   dayNumber    Int
-  orderIndex    Int
-  defaultSets   Int
-  defaultReps   String
+  orderIndex   Int
+  defaultSets  Int
+  defaultReps  String
   notes        String?
-  
-  exercise    Exercise @relation(fields: [exerciseId], references: [id])
-  exerciseId  String
+
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exerciseId String
 
   @@map("workout_templates")
 }
 
 model WorkoutLog {
-  id           String   @id @default(uuid())
-  createdAt    DateTime @default(now())
-  userId       String
-  exerciseId   String
-  weight       Float?
-  reps         Int?
-  setNumber    Int
-  workoutDate  DateTime @default(now())
-  isCompleted  Boolean  @default(false)
-  
-  profile      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exercise     Exercise @relation(fields: [exerciseId], references: [id])
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  userId      String
+  exerciseId  String
+  weight      Float?
+  reps        Int?
+  setNumber   Int
+  workoutDate DateTime @default(now())
+  isCompleted Boolean  @default(false)
+
+  profile  Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
 
   @@map("workout_logs")
 }
 
 model NutritionLog {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now())
-  userId     String
-  logDate    DateTime @default(now())
-  calories   Int?
-  protein    Int?
-  
-  profile    Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  logDate   DateTime @default(now())
+  calories  Int?
+  protein   Int?
+
+  profile Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, logDate])
   @@map("nutrition_logs")
@@ -119,8 +121,37 @@ model ProgressPhoto {
   userId    String
   url       String
   label     String?
-  
-  profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  profile Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("progress_photos")
+}
+
+model MealEntry {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  logDate   DateTime @db.Date
+  name      String
+  mealType  String
+  portion   String?
+  calories  Int
+  protein   Float    @default(0)
+  carbs     Float    @default(0)
+  fat       Float    @default(0)
+  profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, logDate])
+  @@map("meal_entries")
+}
+
+model WeightEntry {
+  id       String   @id @default(uuid())
+  userId   String
+  logDate  DateTime @db.Date
+  weightLb Float
+  profile  Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, logDate])
+  @@map("weight_entries")
 }

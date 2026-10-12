@@ -1,215 +1,287 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/app/lib/supabase";
-import { motion } from "framer-motion";
-import { CheckCircle2, Plus, Minus, Trash2, Play, Save } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Save } from "lucide-react";
+import { getWorkout, saveWorkout } from "@/app/lib/actions/workouts";
 
-interface SetLog {
-  set_number: number;
-  weight: string;
-  reps: string;
-  completed: boolean;
-}
-
-interface ExerciseLog {
-  id: string;
-  name: string;
-  default_sets: number;
-  default_reps: string;
-  sets: SetLog[];
-}
+type SetLog = { weight: string; reps: string; completed: boolean };
+type Workout = Omit<
+  NonNullable<Awaited<ReturnType<typeof getWorkout>>>,
+  "exercises"
+> & {
+  exercises: (NonNullable<
+    Awaited<ReturnType<typeof getWorkout>>
+  >["exercises"][number] & { entries: SetLog[] })[];
+};
 
 export default function WorkoutLogger() {
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [day, setDay] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [workout, setWorkout] = useState<{ title: string; exercises: ExerciseLog[] } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [workoutDate, setWorkoutDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadWorkout() {
+    let active = true;
+    async function load() {
       setLoading(true);
-      
-      // 1. Get user profile to know which template to load
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .single();
-
-      if (!profile) {
-        console.error("No profile found");
-        setLoading(false);
-        return;
+      setError(null);
+      setMessage(null);
+      try {
+        const result = await getWorkout(day);
+        if (!active) return;
+        setWorkout(
+          result
+            ? {
+                ...result,
+                exercises: result.exercises.map((ex) => ({
+                  ...ex,
+                  entries: Array.from({ length: ex.sets }, () => ({
+                    weight: "",
+                    reps: "",
+                    completed: false,
+                  })),
+                })),
+              }
+            : null,
+        );
+        setWorkoutDate(new Date().toISOString());
+      } catch {
+        if (active) {
+          setWorkout(null);
+          setError("Unable to load your workout. Please refresh to try again.");
+        }
+      } finally {
+        if (active) setLoading(false);
       }
-
-      // 2. Fetch the first workout template for their profile
-      // In a full app, we'd track which 'day' they are on. For now, we load Day 1.
-      const { data: templateData } = await supabase
-        .from("workout_templates")
-        .select(`
-          template_name,
-          day_number,
-          order_index,
-          default_sets,
-          default_reps,
-          exercises (name)
-        `)
-        .eq("day_number", 1)
-        .order("order_index", { ascending: true });
-
-      if (templateData && templateData.length > 0) {
-        const exercises = templateData.map(t => ({
-          id: t.exercises?.id || Math.random().toString(), // Fallback
-          name: t.exercises?.name || "Unknown Exercise",
-          default_sets: t.default_sets || 3,
-          default_reps: t.default_reps || "8-12",
-          sets: Array.from({ length: t.default_sets || 3 }, (_, i) => ({
-            set_number: i + 1,
-            weight: "",
-            reps: "",
-            completed: false,
-          }))
-        }));
-
-        setWorkout({
-          title: templateData[0].template_name,
-          exercises
-        });
-      }
-
-      setLoading(false);
     }
+    load();
+    return () => {
+      active = false;
+    };
+  }, [day]);
 
-    loadWorkout();
-  }, []);
-
-  const updateSet = (exIndex: number, setIndex: number, field: keyof SetLog, value: any) => {
-    const newWorkout = { ...workout };
-    if (newWorkout) {
-      newWorkout.exercises[exIndex].sets[setIndex] = {
-        ...newWorkout.exercises[exIndex].sets[setIndex],
-        [field]: value
-      };
-      setWorkout(newWorkout);
-    }
-  };
-
-  const toggleComplete = (exIndex: number, setIndex: number) => {
-    const newWorkout = { ...workout };
-    if (newWorkout) {
-      const set = newWorkout.exercises[exIndex].sets[setIndex];
-      updateSet(exIndex, setIndex, "completed", !set.completed);
-    }
-  };
-
-  const saveWorkout = async () => {
-    setSaving(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const logs: any[] = [];
-      workout?.exercises.forEach((ex, exIdx) => {
-        ex.sets.forEach((set, setIdx) => {
-          if (set.weight || set.reps) {
-            logs.push({
-              user_id: session.user.id,
-              exercise_id: ex.id,
-              weight: parseFloat(set.weight),
-              reps: parseInt(set.reps),
-              set_number: set.set_number,
-              workout_date: new Date().toISOString().split('T')[0],
-              is_completed: set.completed
-            });
+  function updateSet(
+    exIndex: number,
+    setIndex: number,
+    values: Partial<SetLog>,
+  ) {
+    setMessage(null);
+    setWorkout((current) =>
+      current
+        ? {
+            ...current,
+            exercises: current.exercises.map((ex, i) =>
+              i === exIndex
+                ? {
+                    ...ex,
+                    entries: ex.entries.map((entry, j) =>
+                      j === setIndex ? { ...entry, ...values } : entry,
+                    ),
+                  }
+                : ex,
+            ),
           }
-        });
-      });
+        : null,
+    );
+  }
 
-      const { error } = await supabase.from("workout_logs").insert(logs);
-      if (error) throw error;
-      alert("Workout saved to the jungle!");
-    } catch (e) {
-      console.error(e);
-      alert("Error saving workout");
+  async function save() {
+    if (!workout || saving) return;
+    const sets = workout.exercises.flatMap((ex) =>
+      ex.entries.flatMap((entry, i) =>
+        entry.weight.trim() || entry.reps.trim()
+          ? [
+              {
+                exerciseId: ex.id,
+                weight: entry.weight.trim() ? Number(entry.weight) : null,
+                reps: entry.reps.trim() ? Number(entry.reps) : null,
+                setNumber: i + 1,
+                isCompleted: entry.completed,
+              },
+            ]
+          : [],
+      ),
+    );
+    if (!sets.length) {
+      setError("Enter weight or reps for at least one set.");
+      return;
+    }
+    if (
+      sets.some(
+        (set) =>
+          (set.weight !== null &&
+            (!Number.isFinite(set.weight) ||
+              set.weight < 0 ||
+              set.weight > 3000)) ||
+          (set.reps !== null &&
+            (!Number.isInteger(set.reps) || set.reps < 0 || set.reps > 1000)),
+      )
+    ) {
+      setError(
+        "Use positive weights and whole-number reps within the input limits.",
+      );
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await saveWorkout({ workoutDate, sets });
+      setMessage("Session saved.");
+    } catch {
+      setError(
+        "Unable to save your session. Your entries are still here; please try again.",
+      );
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading Workout...</div>;
-  if (!workout) return <div className="min-h-screen bg-black text-white flex items-center justify-center">No workout found for your profile.</div>;
-
-  return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8">
-      <header className="max-w-3xl mx-auto flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter">
-            {workout.title.replace(/-/g, ' ')}
-          </h1>
-          <p className="text-zinc-500">Log your progressive overload</p>
-        </div>
-        <button 
-          onClick={saveWorkout}
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all disabled:opacity-50"
+  if (loading)
+    return (
+      <p role="status" className="p-8 text-zinc-400">
+        Loading workout...
+      </p>
+    );
+  if (!workout)
+    return (
+      <div className="p-8">
+        <p role={error ? "alert" : "status"}>
+          {error || "Complete your intake to create a workout plan."}
+        </p>
+        <Link
+          href="/starter-pack"
+          className="mt-4 inline-block text-yellow-500 underline"
         >
-          {saving ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
-          Save Session
+          Starter intake
+        </Link>
+      </div>
+    );
+  return (
+    <main className="mx-auto max-w-3xl p-4 md:p-8">
+      <Link
+        href="/dashboard/workouts/history"
+        className="mb-5 inline-block text-sm text-yellow-500 underline"
+      >
+        Workout history
+      </Link>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black break-words">{workout.title}</h1>
+          <label className="mt-3 flex items-center gap-3 text-sm text-zinc-400">
+            Training day
+            <select
+              value={day}
+              disabled={saving}
+              onChange={(e) => {
+                const hasEntries = workout.exercises.some((ex) =>
+                  ex.entries.some((entry) => entry.weight || entry.reps),
+                );
+                if (
+                  hasEntries &&
+                  !message &&
+                  !window.confirm(
+                    "Discard unsaved entries and switch training days?",
+                  )
+                )
+                  return;
+                setDay(Number(e.target.value));
+              }}
+              className="rounded-lg bg-zinc-900 p-2 text-white border border-zinc-700"
+            >
+              {Array.from({ length: workout.days }, (_, i) => (
+                <option key={i} value={i + 1}>
+                  Day {i + 1}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black disabled:opacity-50"
+        >
+          <Save className="h-5 w-5" />
+          {saving ? "Saving..." : "Save Session"}
         </button>
       </header>
-
-      <div className="max-w-3xl mx-auto space-y-8">
-        {workout.exercises.map((ex, exIdx) => (
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: exIdx * 0.1 }}
-            key={ex.id} 
-            className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl"
+      {error && (
+        <p role="alert" className="mb-4 text-red-400">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="mb-4 text-green-400">
+          {message}
+        </p>
+      )}
+      <div className="space-y-6">
+        {workout.exercises.map((ex, exIndex) => (
+          <section
+            key={ex.id}
+            className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 md:p-6"
           >
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-zinc-100">{ex.name}</h3>
-              <span className="text-xs font-mono text-zinc-500 bg-zinc-800 px-2 py-1 rounded">
-                Target: {ex.default_reps}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {ex.sets.map((set, setIdx) => (
-                <div key={setIdx} className="grid grid-cols-[40px_1fr_1fr_40px] gap-4 items-center">
-                  <span className="text-zinc-500 font-bold text-center">{set.set_number}</span>
-                  
-                  <div className="relative">
-                    <input 
-                      type="number" 
-                      placeholder="kg/lbs" 
-                      value={set.weight}
-                      onChange={(e) => updateSet(exIdx, setIdx, "weight", e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-center focus:ring-1 focus:ring-yellow-500 outline-none transition-all"
-                    />
-                  </div>
-
-                  <div className="relative">
-                    <input 
-                      type="number" 
-                      placeholder="reps" 
-                      value={set.reps}
-                      onChange={(e) => updateSet(exIdx, setIdx, "reps", e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-center focus:ring-1 focus:ring-yellow-500 outline-none transition-all"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={() => toggleComplete(exIdx, setIdx)}
-                    className={`p-2 rounded-lg transition-all ${set.completed ? 'bg-green-500 text-black' : 'bg-zinc-800 text-zinc-500'}`}
+            <h2 className="text-xl font-bold">{ex.name}</h2>
+            <p className="mb-4 mt-1 text-sm text-zinc-400">
+              Target: {ex.reps} reps
+            </p>
+            <fieldset disabled={saving} className="space-y-3">
+              <legend className="sr-only">Sets for {ex.name}</legend>
+              {ex.entries.map((entry, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-[24px_minmax(0,1fr)_minmax(0,1fr)_40px] items-center gap-2 sm:gap-4"
+                >
+                  <span className="text-center text-zinc-400">{i + 1}</span>
+                  <input
+                    aria-label={`${ex.name} set ${i + 1} weight`}
+                    type="number"
+                    min="0"
+                    max="3000"
+                    step="any"
+                    placeholder="Weight (lb)"
+                    value={entry.weight}
+                    onChange={(e) =>
+                      updateSet(exIndex, i, { weight: e.target.value })
+                    }
+                    className="min-w-0 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-center"
+                  />
+                  <input
+                    aria-label={`${ex.name} set ${i + 1} reps`}
+                    type="number"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    placeholder="Reps"
+                    value={entry.reps}
+                    onChange={(e) =>
+                      updateSet(exIndex, i, { reps: e.target.value })
+                    }
+                    className="min-w-0 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-center"
+                  />
+                  <button
+                    type="button"
+                    aria-label={`${ex.name} set ${i + 1} complete`}
+                    aria-pressed={entry.completed}
+                    title="Mark set complete"
+                    onClick={() =>
+                      updateSet(exIndex, i, { completed: !entry.completed })
+                    }
+                    className={`h-10 w-10 rounded-lg p-2 ${entry.completed ? "bg-green-500 text-black" : "bg-zinc-800 text-zinc-400"}`}
                   >
-                    <CheckCircle2 className="w-5 h-5" />
+                    <CheckCircle2 className="h-5 w-5" />
                   </button>
                 </div>
               ))}
-            </div>
-          </motion.div>
+            </fieldset>
+          </section>
         ))}
       </div>
-    </div>
+    </main>
   );
 }

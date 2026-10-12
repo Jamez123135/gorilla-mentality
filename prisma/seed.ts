@@ -1,69 +1,26 @@
 import { PrismaClient } from "@prisma/client";
-import { manualSessions, femaleFocusedSessions } from "@/app/data/starter-pack/training";
+import { manualSessions, femaleFocusedSessions } from "../app/data/starter-pack/training";
+import { exerciseDefaults } from "../app/lib/workout-plan";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🦍 Starting the Jungle Seeder...");
-
-  // 1. Clear existing data to prevent duplicates
-  await prisma.workoutLog.deleteMany({});
-  await prisma.workoutTemplate.deleteMany({});
-  await prisma.exercise.deleteMany({});
-
-  console.log("🧹 Cleaned existing data.");
-
-  const allRoutines = [
-    { sessions: manualSessions, prefix: "Male" },
-    { sessions: femaleFocusedSessions, prefix: "Female" },
-  ];
-
-  for (const routine of allRoutines) {
-    for (let i = 0; i < routine.sessions.length; i++) {
-      const session = routine.sessions[i];
-      const templateName = `${routine.prefix}-Day${i + 1}-${session.title}`;
-
-      console.log(`🌱 Seeding template: ${templateName}`);
-
-      for (let j = 0; j < session.exercises.length; j++) {
-        const exData = session.exercises[j];
-
-        // Upsert the exercise
-        const exercise = await prisma.exercise.upsert({
-          where: { name: exData.name },
-          update: {},
-          create: {
-            name: exData.name,
-            muscleGroup: "General", // Default, can be expanded
-          },
-        });
-
-        // Extract default sets and reps from the 'details' string (e.g., "4 sets x 6-10 reps")
-        const setsMatch = exData.details.match(/(\d+)\s*sets?/i);
-        const repsMatch = exData.details.match(/(\d+-\d+|\d+)\s*reps?/i);
-
-        await prisma.workoutTemplate.create({
-          data: {
-            templateName,
-            dayNumber: i + 1,
-            orderIndex: j,
-            defaultSets: setsMatch ? parseInt(setsMatch[1]) : 3,
-            defaultReps: repsMatch ? repsMatch[1] : "8-12",
-            exerciseId: exercise.id,
-          },
-        });
+  await prisma.$transaction(async tx => {
+    for (const routine of [{ sessions: manualSessions, prefix: "Male" }, { sessions: femaleFocusedSessions, prefix: "Female" }]) {
+      for (const [index, session] of routine.sessions.entries()) {
+        const templateName = `${routine.prefix}-Day${index + 1}-${session.title}`;
+        for (const [orderIndex, item] of session.exercises.entries()) {
+          const exercise = await tx.exercise.upsert({ where: { name: item.name }, update: {}, create: { name: item.name, muscleGroup: "General" } });
+          const defaults = exerciseDefaults(item.details);
+          const data = { templateName, dayNumber: index + 1, orderIndex, defaultSets: defaults.sets, defaultReps: defaults.reps, exerciseId: exercise.id };
+          const existing = await tx.workoutTemplate.findFirst({ where: { templateName, orderIndex } });
+          if (existing) await tx.workoutTemplate.update({ where: { id: existing.id }, data });
+          else await tx.workoutTemplate.create({ data });
+        }
       }
     }
-  }
-
-  console.log("✅ Jungle seeding complete! All workouts are now in Neon.");
+  }, { timeout: 60000 });
+  console.log("Workout catalog seeded. Existing workout history was preserved.");
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Seeding error:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

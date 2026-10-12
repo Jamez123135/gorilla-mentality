@@ -26,9 +26,11 @@ export function GeneratedPlan({
   onAdjust: () => void;
 }) {
   const [isSavingPdf, setIsSavingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   async function handleSavePdf() {
     setIsSavingPdf(true);
+    setPdfError(null);
 
     try {
       const blob = await createStarterPlanPdf(plan, goal, days);
@@ -53,6 +55,8 @@ export function GeneratedPlan({
       }
 
       downloadPdf(blob, filename);
+    } catch {
+      setPdfError("Unable to prepare your PDF. Please try again.");
     } finally {
       setIsSavingPdf(false);
     }
@@ -66,7 +70,7 @@ export function GeneratedPlan({
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             Routine and meal plan generated
           </p>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-tight md:text-4xl">
+          <h2 className="mt-4 break-words text-3xl font-extrabold tracking-tight md:text-4xl">
             {plan.title}
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
@@ -87,6 +91,7 @@ export function GeneratedPlan({
       <TrainingSummary plan={plan} />
       <TrainingRoutine plan={plan} goal={goal} />
       <MealGuide plan={plan} />
+      {pdfError && <p role="alert" className="mt-4 text-red-400">{pdfError}</p>}
 
       <div className="mt-8 flex flex-col gap-3 border-t border-zinc-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <button

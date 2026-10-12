@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import StarterPackIntake from "./StarterPackIntake";
+import { isAuthConfigured } from "@/app/lib/auth-config";
 
 export const metadata: Metadata = {
   title: "Free Starter Pack | Gorilla Mentality",
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function StarterPackPage() {
-  return <StarterPackIntake />;
+  return <StarterPackIntake authEnabled={isAuthConfigured()} />;
 }

@@ -91,7 +91,7 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function parseWeightInPounds(weight: string, sex: Sex) {
+export function parseWeightInPounds(weight: string, sex: Sex) {
   const normalized = weight.toLowerCase();
   const match = normalized.match(/\d+(\.\d+)?/);
   if (!match) return sex === "male" ? 190 : 155;
