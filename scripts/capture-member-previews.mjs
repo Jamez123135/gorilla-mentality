@@ -22,10 +22,8 @@ const user = await backend.users.createUser({
 });
 const browser = await chromium.launch();
 mkdirSync("public/member-tools", { recursive: true });
+const page = await browser.newPage({ viewport: { width: 1200, height: 820 } });
 try {
-  const page = await browser.newPage({
-    viewport: { width: 1200, height: 820 },
-  });
   await page.goto("http://localhost:3000/login");
   await clerk.signIn({ page, emailAddress: email });
   await page.goto("http://localhost:3000/starter-pack");
@@ -50,6 +48,9 @@ try {
   await page.getByRole("spinbutton", { name: /reps/ }).first().fill("10");
   await page.screenshot({ path: "public/member-tools/workouts.png" });
   await page.goto("http://localhost:3000/dashboard/nutrition");
+  await page
+    .getByRole("heading", { name: "Food Diary", exact: true })
+    .waitFor();
   for (const [name, calories, protein, carbs, fat] of [
     ["Chicken, rice and vegetables", 650, 45, 65, 15],
     ["Greek yogurt and berries", 220, 22, 24, 4],
@@ -75,6 +76,13 @@ try {
   await page.getByRole("cell", { name: "180.8 lb", exact: true }).waitFor();
   await page.screenshot({ path: "public/member-tools/progress.png" });
   console.log("Captured branded member-tool previews.");
+} catch (error) {
+  await page.screenshot({
+    path: ".local/member-preview-failure.png",
+    fullPage: true,
+  });
+  console.error(`Preview capture stopped at ${new URL(page.url()).pathname}`);
+  throw error;
 } finally {
   await browser.close();
   await database.profile.deleteMany({ where: { id: user.id } });

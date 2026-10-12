@@ -57,6 +57,7 @@ export const initialIntakeForm: IntakeForm = {
   height: "",
   weight: "",
   experience: "",
+  musclePriority: "",
 };
 
 export function isIntakeComplete(

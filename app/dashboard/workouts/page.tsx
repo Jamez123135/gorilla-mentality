@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, Save, ArrowRight } from "lucide-react";
 import { getWorkout, saveWorkout } from "@/app/lib/actions/workouts";
+import { workoutFeedback } from "@/app/lib/workout-feedback";
 
 type SetLog = { weight: string; reps: string; completed: boolean };
 type Workout = Omit<
@@ -25,6 +26,9 @@ export default function WorkoutLogger() {
   const [workoutDate, setWorkoutDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<ReturnType<
+    typeof workoutFeedback
+  > | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -32,6 +36,7 @@ export default function WorkoutLogger() {
       setLoading(true);
       setError(null);
       setMessage(null);
+      setFeedback(null);
       try {
         const result = await getWorkout(day);
         if (!active) return;
@@ -161,10 +166,28 @@ export default function WorkoutLogger() {
           ? "Session finished. Your next workout is ready."
           : "Session saved.",
       );
-      if (finished)
+      if (finished) {
+        const repSets = sets.filter(
+          (set) =>
+            !workout.exercises
+              .find((exercise) => exercise.id === set.exerciseId)
+              ?.reps.includes("sec"),
+        );
+        setFeedback({
+          ...workoutFeedback(
+            sets,
+            workout.exercises.reduce(
+              (total, exercise) => total + exercise.sets,
+              0,
+            ),
+            effort,
+          ),
+          volume: workoutFeedback(repSets, 0).volume,
+        });
         setWorkout((current) =>
           current ? { ...current, isCompleted: true } : null,
         );
+      }
     } catch {
       setError(
         "Unable to save your session. Your entries are still here; please try again.",
@@ -257,6 +280,17 @@ export default function WorkoutLogger() {
         <p role="status" className="mb-4 text-green-400">
           {message}
         </p>
+      )}
+      {feedback && (
+        <section className="mb-6 border-y border-zinc-800 py-5">
+          <h2 className="text-xl font-semibold">Session feedback</h2>
+          <p className="mt-3 text-sm text-zinc-300">
+            {feedback.completed} of {feedback.planned} planned sets completed.
+            Recorded weighted-rep volume: {feedback.volume.toLocaleString()}{" "}
+            lb-reps.
+          </p>
+          <p className="mt-2 text-sm text-zinc-400">{feedback.advice}</p>
+        </section>
       )}
       {workout.isCompleted && (
         <button

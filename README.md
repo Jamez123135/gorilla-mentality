@@ -78,6 +78,10 @@ dashboard totals, and sign-out. They create and remove their own test users and
 run only against the local database and development Clerk keys. Server tests
 also verify ownership and validation with mocks. Production credentials/domain
 configuration and FormSubmit email delivery need a separate live check.
+Tests also cover muscle priorities, calculated meals, pantry ideas, community
+ownership/reporting, and session-token refresh. Browser workers run sequentially
+to avoid contention in local development authentication; run preview capture
+separately from the browser suite.
 
 ## Member Tools
 
@@ -90,6 +94,81 @@ configuration and FormSubmit email delivery need a separate live check.
   upload or delete private progress photos.
 - Dashboard: today's intake, weekly workout count, latest weight, and next
   steps based on missing intake or tracking records.
+- Plan handoff: after a signed-in intake saves successfully, **View in
+  Dashboard** opens the saved routine. A failed save shows a retry warning
+  rather than pretending the dashboard was updated.
+- Muscle priorities: optionally select balanced, chest, back, shoulders, arms,
+  legs, glutes, or core in intake. Change priority, days, and experience in
+  Dashboard > Profile without deleting tracking history. Focused splits use
+  two small emphasis slots while retaining all original base movements.
+- Session feedback: finishing shows completed versus planned sets, recorded
+  weighted-rep volume (timed holds excluded), and recovery/progression feedback.
+- Meal calculator: select foods and gram portions; USDA values determine
+  calories and macros. The server recalculates totals before saving. Manual
+  entry remains available for package labels and foods outside the library.
+- Pantry ideas: enter comma-separated ingredient names, exclude common
+  allergens, and optionally set a meal calorie/protein budget. Recipe portions
+  scale within limits; missing ingredients and budget gaps stay visible. Daily
+  targets guide default budgets. These are deterministic suggestions, not AI
+  or medical meal plans. Review the ingredients before logging food consumed.
+- Community: member-only posts, topic categories, owner editing/deletion,
+  comments, likes, pagination, and reports. Public display names are entered
+  explicitly. No meals, weight, workouts, or photos are shared automatically.
+
+## Community Moderation
+
+Set optional `COMMUNITY_MODERATOR_IDS` to comma-separated **Clerk user IDs**
+in `.env.local` and Vercel. Restart locally/redeploy after changes. This is a
+server-only allowlist; never prefix it with `NEXT_PUBLIC_`. Find your user ID
+in Clerk Dashboard > Users. Moderators see **Review reports** in Community,
+can remove reported posts/comments, and dismiss reports. Post deletion also
+removes its comments, likes and reports. Without configured moderators,
+reports are stored but nobody has moderator privileges, so configure your ID
+before opening the community publicly. Names are member-selected, not verified
+identities or proof of professional credentials. Posting is limited to three
+posts and ten comments per member per minute using database transactions.
+These basic controls are not a replacement for active community moderation.
+
+## Food Data And Resource Approval
+
+`app/data/foods.json` contains 18 common-food records from the official
+[USDA FoodData Central SR Legacy April 2018 dataset](https://fdc.nal.usda.gov/download-datasets/).
+It records each FDC ID, original description, food preparation state, and
+calories/protein/carbs/fat per 100 grams. No API key or paid API is needed.
+Values are estimates; brands, added oil/sauces, cooking state, edible weights
+and allergen cross-contact matter. This is not a comprehensive food database.
+
+To reproduce it, download and extract the SR Legacy JSON archive from USDA,
+then run `node scripts/import-food-library.mjs PATH_TO_EXTRACTED_JSON`.
+Edit that script's explicit selection to add verified records and rebuild.
+Recipe combinations and matching live in `app/lib/food-calculator.ts`;
+allergen tags are curated and do not guarantee an allergen-safe product.
+
+The researched resource shortlist is in `RESOURCE_CHECKLIST.md` and the
+clickable `resource-checklist.html` file at the repository root. Open the HTML
+file directly; no server is required. Tick choices and share their R01-R13
+IDs in the conversation. Selections are saved in your browser only, not sent
+to the assistant or production database. The proposed external resource
+library publishes the owner-approved **R02, R03, R05, R06, R07, R09, R10,
+and R12** at `/resources`. R01, R04, R08, R11, and R13 are not published.
+Edit `app/data/resources.ts` to maintain links, descriptions and review date;
+`app/resources/page.tsx` owns the layout. Link to original
+resources instead of copying copyrighted pages or videos. The research
+covers training, nutrition, budget meals, food safety, recovery and habits.
+
+## Where To Change The New Features
+
+| Change | File |
+| --- | --- |
+| Muscle names and emphasis exercises | `app/lib/muscle-priority.ts` |
+| Intake options and dashboard handoff | `app/starter-pack/components/StarterPackForm.tsx`, `app/starter-pack/StarterPackIntake.tsx` |
+| Dashboard routine preferences | `app/dashboard/profile/RoutinePreferences.tsx`, `app/lib/actions/routine.ts` |
+| Session feedback | `app/lib/workout-feedback.ts`, `app/dashboard/workouts/page.tsx` |
+| Food data and imports | `app/data/foods.json`, `scripts/import-food-library.mjs` |
+| Meal calculation and pantry recipes | `app/lib/food-calculator.ts`, `app/dashboard/nutrition/FoodTools.tsx` |
+| Community feed and permissions | `app/dashboard/community/page.tsx`, `app/lib/actions/community.ts` |
+| New database tables/columns | `prisma/schema.prisma`, `prisma/bootstrap.sql` |
+| Resource shortlist | `RESOURCE_CHECKLIST.md`, `resource-checklist.html` |
 
 ## How Adaptive Workouts Work
 
@@ -196,10 +275,16 @@ changing appearance does not promote a development instance to production.
 | `MealEntry` | Individually entered meals and macros for a selected date. |
 | `WeightEntry` | Body weight normalized to lb, unique by member/date. |
 | `ProgressPhoto` | Private compressed JPEG payload and metadata. |
+| `CommunityPost` | Member-shared text, public display name, topic, and owner. |
+| `CommunityComment` | Member replies; deleted with the parent post. |
+| `CommunityLike` | One like per member/post. |
+| `CommunityReport` | Member reports visible only to configured moderators. |
 | `CoachingApplication` | Existing model reserved for a future database-backed application flow; current applications go through FormSubmit. |
 
-Server actions and API routes obtain the Clerk user ID from the session and
-filter reads/updates/deletes by that ID. Never move Prisma or secret-key access
+Server actions and API routes obtain the Clerk user ID from the session.
+Private tracking reads/updates/deletes are filtered by that ID. Community
+posts are visible to signed-in members, edits require ownership, and removal
+also supports the server-side moderator allowlist. Never move Prisma or secret-key access
 into client components. Do not commit `.env.local`, `.local`, test traces, or
 database data. Daily meal/weight dates are stored as date-only values; workout
 sessions use timestamps to identify separate sessions and repeat saves.

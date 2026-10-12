@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { musclePriorities } from "@/app/lib/muscle-priority";
 
 export const profileInput = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -9,6 +10,7 @@ export const profileInput = z.object({
   trainingDays: z.number().int().min(3).max(6),
   targetCalories: z.number().int().min(1).max(10000),
   targetProtein: z.number().int().min(1).max(1000),
+  musclePriority: z.enum(musclePriorities).default("balanced"),
 });
 
 export const nutritionInput = z.object({

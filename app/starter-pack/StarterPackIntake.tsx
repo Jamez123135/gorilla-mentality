@@ -71,6 +71,7 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
             currentWeight: parseWeightInPounds(form.weight, form.sex),
             trainingDays: form.days,
             trainingExperience: form.experience,
+            musclePriority: form.musclePriority || "balanced",
             // Calculate and save nutrition targets
             targetCalories: plan.nutrition.calories,
             targetProtein: Math.round(
@@ -192,12 +193,23 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
               isLoading={loading}
             />
           ) : plan && isIntakeComplete(form) ? (
-            <GeneratedPlan
-              plan={plan}
-              goal={form.goal}
-              days={form.days}
-              onAdjust={() => setGenerated(false)}
-            />
+            <div>
+              {user && !syncError && (
+                <Link
+                  href="/dashboard/workouts"
+                  className="mb-5 inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black"
+                >
+                  <UserRound className="h-5 w-5" />
+                  View in Dashboard
+                </Link>
+              )}
+              <GeneratedPlan
+                plan={plan}
+                goal={form.goal}
+                days={form.days}
+                onAdjust={() => setGenerated(false)}
+              />
+            </div>
           ) : null}
         </div>
       </section>

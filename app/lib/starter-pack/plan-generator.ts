@@ -1,4 +1,5 @@
 import { foodBank } from "@/app/data/starter-pack/nutrition";
+import { prioritizeMuscle } from "@/app/lib/muscle-priority";
 import {
   femaleFocusedSessions,
   femaleSessionIndexesByDays,
@@ -34,7 +35,9 @@ type SplitStrategy = {
 
 const manualSplitStrategy: SplitStrategy = {
   getSessions(days) {
-    return manualSessionIndexesByDays[days].map((index) => manualSessions[index]);
+    return manualSessionIndexesByDays[days].map(
+      (index) => manualSessions[index],
+    );
   },
   getSplitLabel() {
     return "manual-style Gorilla split";
@@ -70,7 +73,10 @@ export function createStarterPlan(form: CompletedIntakeForm): StarterPlan {
     firstName,
     title: `${firstName}'s ${form.days}-day ${goalLabels[form.goal]} starter plan`,
     nutrition,
-    selectedSessions: splitStrategy.getSessions(form.days),
+    selectedSessions: prioritizeMuscle(
+      splitStrategy.getSessions(form.days),
+      form.musclePriority,
+    ),
     splitLabel: splitStrategy.getSplitLabel(form.days),
     meals,
     mealTotals: meals.reduce(
@@ -147,7 +153,8 @@ function getTrainingAdjustment(goal: Goal): TrainingAdjustment {
       cardio:
         "Use 8-12 min easy incline walking as the warmup. Keep hard cardio low so food and recovery can drive muscle gain.",
       steps: "8,000-10,000 daily steps.",
-      effort: "Push the final working set close to failure on machines and accessories.",
+      effort:
+        "Push the final working set close to failure on machines and accessories.",
     };
   }
 
@@ -156,7 +163,8 @@ function getTrainingAdjustment(goal: Goal): TrainingAdjustment {
       cardio:
         "Use 15-20 min incline walking before lifts, then add 10 min easy cardio after lower body days.",
       steps: "10,000-12,000 daily steps.",
-      effort: "Leave 1-2 reps in the tank on compounds and push accessories harder.",
+      effort:
+        "Leave 1-2 reps in the tank on compounds and push accessories harder.",
     };
   }
 
@@ -164,7 +172,8 @@ function getTrainingAdjustment(goal: Goal): TrainingAdjustment {
     cardio:
       "Keep the manual-style 30 min incline walk at 10 incline and 3 pace before lifting.",
     steps: "12,000-15,000 daily steps, with one active-rest mobility day.",
-    effort: "Controlled reps first. Let the calorie deficit and daily movement do their job.",
+    effort:
+      "Controlled reps first. Let the calorie deficit and daily movement do their job.",
   };
 }
 
@@ -191,7 +200,11 @@ function getMeals(goal: Goal, calories: number): Meal[] {
       },
       {
         title: "Lunch",
-        items: ["6 oz chicken breast", "1-1.5 cups cooked rice", "mixed vegetables"],
+        items: [
+          "6 oz chicken breast",
+          "1-1.5 cups cooked rice",
+          "mixed vegetables",
+        ],
         calories: calories > 2600 ? 700 : 585,
         protein: 62,
       },
@@ -237,7 +250,11 @@ function getMeals(goal: Goal, calories: number): Meal[] {
       },
       {
         title: "Dinner",
-        items: ["lean ground beef stir fry", "potato or rice", "mixed vegetables"],
+        items: [
+          "lean ground beef stir fry",
+          "potato or rice",
+          "mixed vegetables",
+        ],
         calories: 650,
         protein: 50,
       },

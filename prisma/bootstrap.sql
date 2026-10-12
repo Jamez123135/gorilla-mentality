@@ -64,4 +64,33 @@ CREATE TABLE IF NOT EXISTS "workout_sessions" (
   UNIQUE ("userId", "workoutDate")
 );
 CREATE INDEX IF NOT EXISTS "workout_sessions_userId_planKey_workoutDate_idx" ON "workout_sessions"("userId", "planKey", "workoutDate");
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "musclePriority" TEXT DEFAULT 'balanced';
+CREATE TABLE IF NOT EXISTS "community_posts" (
+  "id" TEXT PRIMARY KEY, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL, "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "authorName" TEXT NOT NULL, "body" TEXT NOT NULL, "category" TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "community_posts_createdAt_id_idx" ON "community_posts"("createdAt", "id");
+CREATE INDEX IF NOT EXISTS "community_posts_userId_createdAt_idx" ON "community_posts"("userId", "createdAt");
+CREATE TABLE IF NOT EXISTS "community_comments" (
+  "id" TEXT PRIMARY KEY, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "postId" TEXT NOT NULL REFERENCES "community_posts"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "authorName" TEXT NOT NULL, "body" TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "community_comments_postId_createdAt_idx" ON "community_comments"("postId", "createdAt");
+CREATE INDEX IF NOT EXISTS "community_comments_userId_createdAt_idx" ON "community_comments"("userId", "createdAt");
+CREATE TABLE IF NOT EXISTS "community_likes" (
+  "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "postId" TEXT NOT NULL REFERENCES "community_posts"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  PRIMARY KEY ("userId", "postId")
+);
+CREATE INDEX IF NOT EXISTS "community_likes_postId_idx" ON "community_likes"("postId");
+CREATE TABLE IF NOT EXISTS "community_reports" (
+  "id" TEXT PRIMARY KEY, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "postId" TEXT NOT NULL REFERENCES "community_posts"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "reason" TEXT NOT NULL, UNIQUE ("userId", "postId")
+);
+CREATE INDEX IF NOT EXISTS "community_reports_createdAt_idx" ON "community_reports"("createdAt");
 COMMIT;

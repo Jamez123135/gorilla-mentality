@@ -13,6 +13,7 @@ export type CompletedIntakeForm = {
   height: string;
   weight: string;
   experience: Experience;
+  musclePriority?: import("@/app/lib/muscle-priority").MusclePriority | "";
 };
 
 export type IntakeForm = Omit<

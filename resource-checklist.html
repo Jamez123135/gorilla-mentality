@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gorilla Mentality | Resource Review</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #18181b;
+        color: #fafafa;
+        font:
+          16px/1.6 Arial,
+          sans-serif;
+        letter-spacing: 0;
+      }
+      main {
+        max-width: 900px;
+        margin: auto;
+        padding: 24px;
+      }
+      header {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        border-bottom: 1px solid #3f3f46;
+        padding-bottom: 24px;
+      }
+      header img {
+        width: 64px;
+        height: 92px;
+        object-fit: contain;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 28px 0 8px;
+        color: #eab308;
+      }
+      p {
+        color: #a1a1aa;
+      }
+      label {
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px 0;
+        border-bottom: 1px solid #3f3f46;
+      }
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-top: 5px;
+        accent-color: #eab308;
+      }
+      a {
+        color: #fafafa;
+        text-decoration-color: #eab308;
+        text-underline-offset: 4px;
+      }
+      small {
+        display: block;
+        color: #a1a1aa;
+      }
+      button {
+        border: 0;
+        background: #eab308;
+        color: #09090b;
+        font: 700 14px Arial;
+        padding: 12px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #22c55e;
+        outline-offset: 4px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 70px;
+        border: 1px solid #3f3f46;
+        border-radius: 6px;
+        background: #09090b;
+        color: #fafafa;
+        padding: 12px;
+        font: 14px Arial;
+        resize: vertical;
+      }
+      footer {
+        margin-top: 28px;
+        border-top: 1px solid #3f3f46;
+        padding-top: 20px;
+      }
+      #status {
+        color: #4ade80;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      @media (max-width: 420px) {
+        main {
+          padding: 16px;
+        }
+        h1 {
+          font-size: 23px;
+        }
+        header {
+          gap: 12px;
+        }
+        header img {
+          width: 46px;
+          height: 68px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="public/brand.png" alt="Gorilla Mentality" />
+        <div>
+          <h1>Gorilla Mentality</h1>
+          <p>Free transformation resources: owner review</p>
+        </div>
+      </header>
+      <p>
+        Researched October 12, 2026. Choose the resources you approve before
+        they are added to the app. These sources are free to access; groceries,
+        equipment and clinical care can still cost money. Your eight approved
+        resources are selected below; the others remain proposals.
+      </p>
+      <h2>Training And Movement</h2>
+      <label
+        ><input type="checkbox" value="R01" /><span
+          ><a
+            href="https://acsm.org/resistance-training-guidelines-update-2026/"
+            target="_blank"
+            rel="noreferrer"
+            >R01: Strength-training principles</a
+          ><small
+            >ACSM 2026 free summary and infographic. Other ACSM products may be
+            paid.</small
+          ></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R02" /><span
+          ><a
+            href="https://www.nhs.uk/live-well/exercise/strength-and-resistance/"
+            target="_blank"
+            rel="noreferrer"
+            >R02: Warm-up, strength and cool-down videos</a
+          ><small>NHS movement videos linked beside workouts.</small></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R03" /><span
+          ><a
+            href="https://www.nhs.uk/better-health/get-active/home-workout-videos/"
+            target="_blank"
+            rel="noreferrer"
+            >R03: No-gym workouts</a
+          ><small
+            >NHS short home cardio, strengthening and stretching
+            sessions.</small
+          ></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R04" /><span
+          ><a
+            href="https://www.nhs.uk/better-health/get-active/get-running-with-couch-to-5k/"
+            target="_blank"
+            rel="noreferrer"
+            >R04: Beginner running</a
+          ><small>NHS Couch to 5K, an optional cardio pathway.</small></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R05" /><span
+          ><a
+            href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html"
+            target="_blank"
+            rel="noreferrer"
+            >R05: Cardio and whole-body activity</a
+          ><small>CDC adult activity reference.</small></span
+        ></label
+      >
+      <h2>Nutrition And Cooking</h2>
+      <label
+        ><input type="checkbox" value="R06" /><span
+          ><a href="https://fdc.nal.usda.gov/" target="_blank" rel="noreferrer"
+            >R06: Food and portion reference</a
+          ><small
+            >USDA FoodData Central search and data. The separately requested
+            calculator uses attributed data.</small
+          ></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R07" /><span
+          ><a
+            href="https://food-guide.canada.ca/en/recipes/"
+            target="_blank"
+            rel="noreferrer"
+            >R07: Healthy meal ideas</a
+          ><small>Canada's Food Guide searchable recipes.</small></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R08" /><span
+          ><a
+            href="https://www.canada.ca/en/health-canada/services/food-guide/eating-support/meal-planning-grocery-shopping/healthy-eating-budget.html"
+            target="_blank"
+            rel="noreferrer"
+            >R08: Low-cost groceries</a
+          ><small>Health Canada shopping and budget guidance.</small></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R09" /><span
+          ><a
+            href="https://www.foodsafety.gov/food-safety-charts"
+            target="_blank"
+            rel="noreferrer"
+            >R09: Meal-prep safety</a
+          ><small
+            >FoodSafety.gov cooking temperature and storage charts.</small
+          ></span
+        ></label
+      >
+      <h2>Recovery And Consistency</h2>
+      <label
+        ><input type="checkbox" value="R10" /><span
+          ><a
+            href="https://www.cdc.gov/sleep/about/index.html"
+            target="_blank"
+            rel="noreferrer"
+            >R10: Sleep and recovery</a
+          ><small>CDC age-specific guidance and sleep habits.</small></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R11" /><span
+          ><a
+            href="https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/"
+            target="_blank"
+            rel="noreferrer"
+            >R11: Stress management</a
+          ><small
+            >NHS breathing exercise. Not a replacement for mental-health
+            care.</small
+          ></span
+        ></label
+      >
+      <label
+        ><input type="checkbox" value="R12" /><span
+          ><a
+            href="https://www.niddk.nih.gov/health-information/diet-nutrition/changing-habits-better-health"
+            target="_blank"
+            rel="noreferrer"
+            >R12: Habits and maintenance</a
+          ><small
+            >NIDDK realistic goals, barriers and sustained routines.</small
+          ></span
+        ></label
+      >
+      <h2>Optional Adult Planning Tool</h2>
+      <label
+        ><input type="checkbox" value="R13" /><span
+          ><a
+            href="https://www.niddk.nih.gov/health-information/weight-management/body-weight-planner"
+            target="_blank"
+            rel="noreferrer"
+            >R13: Weight-goal planning</a
+          ><small
+            >NIDDK Body Weight Planner. Adults 18+ only; not for pregnancy or
+            breastfeeding.</small
+          ></span
+        ></label
+      >
+      <footer>
+        <p>
+          Selections remain in this browser. They do not automatically add
+          resources or deploy changes. Share your selected IDs in the
+          conversation for integration.
+        </p>
+        <p id="status" aria-live="polite"></p>
+        <textarea
+          readonly
+          aria-label="Selected resource IDs"
+          id="selection"
+        ></textarea>
+        <div class="actions">
+          <button type="button" id="download">Download selections</button
+          ><button type="button" id="clear">Clear selections</button>
+        </div>
+        <p>
+          Education, not medical advice or a guarantee of results. Individual
+          needs, injuries and medical conditions may require qualified care.
+          Membership and tracking remain free; only direct 1:1 coaching is paid.
+        </p>
+      </footer>
+    </main>
+    <script>
+      const boxes = [...document.querySelectorAll("input[type=checkbox]")];
+      const key = "gorilla-resource-review-v2";
+      const approved = ["R02", "R03", "R05", "R06", "R07", "R09", "R10", "R12"];
+      let saved = approved;
+      try {
+        const value = JSON.parse(
+          localStorage.getItem(key) || JSON.stringify(approved),
+        );
+        if (Array.isArray(value)) saved = value;
+      } catch {}
+      boxes.forEach((box) => {
+        box.checked = saved.includes(box.value);
+        box.addEventListener("change", update);
+      });
+      function selected() {
+        return boxes.filter((box) => box.checked).map((box) => box.value);
+      }
+      function update() {
+        const ids = selected();
+        document.getElementById("selection").value = ids.length
+          ? ids.join(", ")
+          : "No resources selected";
+        document.getElementById("status").textContent =
+          ids.length + " of " + boxes.length + " selected";
+        try {
+          localStorage.setItem(key, JSON.stringify(ids));
+        } catch {}
+      }
+      document.getElementById("clear").onclick = () => {
+        boxes.forEach((box) => (box.checked = false));
+        update();
+      };
+      document.getElementById("download").onclick = () => {
+        const url = URL.createObjectURL(
+          new Blob(
+            [
+              JSON.stringify(
+                { reviewed: "2026-10-12", selected: selected() },
+                null,
+                2,
+              ),
+            ],
+            { type: "application/json" },
+          ),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "gorilla-resource-selections.json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+      update();
+    </script>
+  </body>
+</html>

@@ -2,6 +2,7 @@
 
 import { UserProfile } from "@clerk/nextjs";
 import Link from "next/link";
+import RoutinePreferences from "./RoutinePreferences";
 
 export default function ProfilePage() {
   return (
@@ -13,6 +14,7 @@ export default function ProfilePage() {
       >
         Update your training and nutrition targets
       </Link>
+      <RoutinePreferences />
       <div className="max-w-full overflow-x-auto">
         <UserProfile routing="hash" />
       </div>

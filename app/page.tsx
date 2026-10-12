@@ -43,21 +43,22 @@ export default function HomePage() {
     <main className="min-h-screen bg-zinc-950 text-zinc-50 selection:bg-yellow-500 selection:text-black">
       <SiteHeader />
       <section className="relative overflow-hidden border-b border-zinc-800 bg-black">
-        <Image
-          src="/brand.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-contain object-right opacity-30 md:opacity-100"
-        />
-        <div className="absolute inset-0 bg-black/35 md:bg-transparent" />
+        <div className="pointer-events-none absolute inset-0 mx-auto max-w-6xl">
+          <Image
+            src="/brand.png"
+            alt=""
+            fill
+            priority
+            sizes="(min-width: 768px) 520px, 200px"
+            className="!bottom-auto !left-auto !right-4 !top-[58px] !h-[112px] !w-[80px] object-contain md:!inset-y-0 md:!right-0 md:!h-full md:!w-[46%] md:object-right"
+          />
+        </div>
         <div className="relative mx-auto flex min-h-[480px] max-w-6xl items-center px-5 py-8 md:min-h-[520px] md:py-12">
-          <div className="max-w-lg">
+          <div className="max-w-lg md:max-w-[48%]">
             <p className="text-xs font-bold uppercase text-yellow-500">
               Free Membership. Real Commitment.
             </p>
-            <h1 className="mt-4 text-4xl font-black leading-tight md:text-6xl">
+            <h1 className="mt-4 max-w-[190px] text-4xl font-black leading-tight md:max-w-none md:text-6xl">
               Gorilla <span className="block text-yellow-500">Mentality</span>
             </h1>
             <p className="mt-4 text-lg font-semibold">
@@ -79,7 +80,15 @@ export default function HomePage() {
                 Get a starter plan
               </Link>
             </div>
-            <p className="mt-6 flex items-center gap-2 text-xs text-zinc-300">
+            <p className="mt-4 text-sm">
+              <Link
+                href="/resources"
+                className="font-semibold text-yellow-500 underline underline-offset-4"
+              >
+                Free training, food and recovery resources
+              </Link>
+            </p>
+            <p className="mt-4 flex items-center gap-2 text-xs text-zinc-300">
               <Check className="h-4 w-4 text-yellow-500" />
               Free tracking tools. No membership payment.
             </p>

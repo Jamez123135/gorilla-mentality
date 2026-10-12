@@ -3,6 +3,46 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/app/lib/prisma";
 import { mealInput, nutritionInput } from "@/app/lib/validation";
+import { z } from "zod";
+import { calculateFood, foods } from "@/app/lib/food-calculator";
+
+export async function saveCalculatedMeal(input: unknown) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  const data = z
+    .object({
+      date: z.iso.date(),
+      name: z.string().trim().min(1).max(160),
+      mealType: mealInput.shape.mealType,
+      portions: z
+        .array(
+          z.object({
+            foodId: z.string(),
+            grams: z.number().positive().max(2000),
+          }),
+        )
+        .min(1)
+        .max(20),
+    })
+    .parse(input);
+  const totals = calculateFood(data.portions);
+  const portion = data.portions
+    .map(
+      (item) =>
+        `${item.grams}g ${foods.find((food) => food.id === item.foodId)!.name}`,
+    )
+    .join(", ");
+  return saveMeal({
+    date: data.date,
+    name: data.name,
+    mealType: data.mealType,
+    portion:
+      portion.length > 120
+        ? `${data.portions.length} weighed ingredients`
+        : portion,
+    ...totals,
+  });
+}
 
 export async function getNutritionDiary(date: string) {
   const { userId } = await auth();

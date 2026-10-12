@@ -11,6 +11,7 @@ import {
 } from "@/app/lib/actions/meals";
 import { localDate } from "@/app/lib/validation";
 import { mealTotals } from "@/app/lib/tracking-summary";
+import FoodTools from "./FoodTools";
 
 type Diary = Awaited<ReturnType<typeof getNutritionDiary>>;
 const emptyMeal = {
@@ -208,6 +209,21 @@ export default function NutritionTracker() {
                 </Link>
               </p>
             )}
+            <FoodTools
+              key={date}
+              date={date}
+              remainingCalories={
+                diary.profile?.targetCalories
+                  ? diary.profile.targetCalories - totals.calories
+                  : null
+              }
+              remainingProtein={
+                diary.profile?.targetProtein
+                  ? diary.profile.targetProtein - totals.protein
+                  : null
+              }
+              onSave={refresh}
+            />
             <section className="py-7">
               <h2 className="mb-4 text-xl font-semibold">Meals</h2>
               {!diary.meals.length && !diary.legacyLog && (
@@ -273,12 +289,10 @@ export default function NutritionTracker() {
                             carbs: String(meal.carbs),
                             fat: String(meal.fat),
                           });
-                          document
-                            .getElementById("meal-form")
-                            ?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "center",
-                            });
+                          document.getElementById("meal-form")?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center",
+                          });
                         }}
                       >
                         <Pencil className="h-4 w-4" />

@@ -4,15 +4,23 @@ import {
   manualSessions,
   manualSessionIndexesByDays,
 } from "@/app/data/starter-pack/training";
+import { prioritizeMuscle } from "@/app/lib/muscle-priority";
 
-export function workoutSessions(sex: string | null, days: number | null) {
+export function workoutSessions(
+  sex: string | null,
+  days: number | null,
+  priority?: string | null,
+) {
   const count = days && days >= 3 && days <= 6 ? days : 3;
   const female = sex === "female";
   const sessions = female ? femaleFocusedSessions : manualSessions;
   const indexes = (
     female ? femaleSessionIndexesByDays : manualSessionIndexesByDays
   )[count];
-  return indexes.map((index) => sessions[index]);
+  return prioritizeMuscle(
+    indexes.map((index) => sessions[index]),
+    priority,
+  );
 }
 
 export function exerciseDefaults(details: string) {
@@ -34,11 +42,15 @@ export function routineKey(profile: {
   trainingDays: number | null;
   goal: string | null;
   trainingExperience: string | null;
+  musclePriority?: string | null;
 }) {
   return [
     profile.sex,
     profile.trainingDays,
     profile.goal,
     profile.trainingExperience,
+    ...(profile.musclePriority && profile.musclePriority !== "balanced"
+      ? [profile.musclePriority]
+      : []),
   ].join(":");
 }

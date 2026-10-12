@@ -1,0 +1,319 @@
+{
+  "source": "USDA FoodData Central SR Legacy, April 2018",
+  "sourceUrl": "https://fdc.nal.usda.gov/download-datasets/",
+  "foods": [
+    {
+      "id": "chicken",
+      "fdcId": 171477,
+      "name": "Chicken breast, roasted",
+      "sourceDescription": "Chicken, broilers or fryers, breast, meat only, cooked, roasted",
+      "allergens": [],
+      "aliases": [
+        "chicken",
+        "chicken breast"
+      ],
+      "per100g": {
+        "calories": 165,
+        "protein": 31,
+        "carbs": 0,
+        "fat": 3.57
+      }
+    },
+    {
+      "id": "rice",
+      "fdcId": 168878,
+      "name": "White rice, cooked",
+      "sourceDescription": "Rice, white, long-grain, regular, enriched, cooked",
+      "allergens": [],
+      "aliases": [
+        "rice",
+        "white rice"
+      ],
+      "per100g": {
+        "calories": 130,
+        "protein": 2.69,
+        "carbs": 28.2,
+        "fat": 0.28
+      }
+    },
+    {
+      "id": "lentils",
+      "fdcId": 172421,
+      "name": "Lentils, boiled, no salt",
+      "sourceDescription": "Lentils, mature seeds, cooked, boiled, without salt",
+      "allergens": [],
+      "aliases": [
+        "lentils"
+      ],
+      "per100g": {
+        "calories": 116,
+        "protein": 9.02,
+        "carbs": 20.1,
+        "fat": 0.38
+      }
+    },
+    {
+      "id": "tofu",
+      "fdcId": 172475,
+      "name": "Firm tofu, raw",
+      "sourceDescription": "Tofu, raw, firm, prepared with calcium sulfate",
+      "allergens": [
+        "soy"
+      ],
+      "aliases": [
+        "tofu"
+      ],
+      "per100g": {
+        "calories": 144,
+        "protein": 17.3,
+        "carbs": 2.78,
+        "fat": 8.72
+      }
+    },
+    {
+      "id": "yogurt",
+      "fdcId": 170894,
+      "name": "Greek yogurt, plain, nonfat",
+      "sourceDescription": "Yogurt, Greek, plain, nonfat (Includes foods for USDA's Food Distribution Program)",
+      "allergens": [
+        "milk"
+      ],
+      "aliases": [
+        "yogurt",
+        "greek yogurt"
+      ],
+      "per100g": {
+        "calories": 59,
+        "protein": 10.2,
+        "carbs": 3.6,
+        "fat": 0.39
+      }
+    },
+    {
+      "id": "oats",
+      "fdcId": 173904,
+      "name": "Oats, dry",
+      "sourceDescription": "Cereals, oats, regular and quick, not fortified, dry",
+      "allergens": [],
+      "aliases": [
+        "oats",
+        "oatmeal"
+      ],
+      "per100g": {
+        "calories": 379,
+        "protein": 13.2,
+        "carbs": 67.7,
+        "fat": 6.52
+      }
+    },
+    {
+      "id": "banana",
+      "fdcId": 173944,
+      "name": "Banana, raw",
+      "sourceDescription": "Bananas, raw",
+      "allergens": [],
+      "aliases": [
+        "banana",
+        "bananas"
+      ],
+      "per100g": {
+        "calories": 89,
+        "protein": 1.09,
+        "carbs": 22.8,
+        "fat": 0.33
+      }
+    },
+    {
+      "id": "berries",
+      "fdcId": 167762,
+      "name": "Strawberries, raw",
+      "sourceDescription": "Strawberries, raw",
+      "allergens": [],
+      "aliases": [
+        "strawberry",
+        "strawberries"
+      ],
+      "per100g": {
+        "calories": 32,
+        "protein": 0.67,
+        "carbs": 7.68,
+        "fat": 0.3
+      }
+    },
+    {
+      "id": "spinach",
+      "fdcId": 168462,
+      "name": "Spinach, raw",
+      "sourceDescription": "Spinach, raw",
+      "allergens": [],
+      "aliases": [
+        "spinach"
+      ],
+      "per100g": {
+        "calories": 23,
+        "protein": 2.86,
+        "carbs": 3.63,
+        "fat": 0.39
+      }
+    },
+    {
+      "id": "broccoli",
+      "fdcId": 169967,
+      "name": "Broccoli, boiled, no salt",
+      "sourceDescription": "Broccoli, cooked, boiled, drained, without salt",
+      "allergens": [],
+      "aliases": [
+        "broccoli"
+      ],
+      "per100g": {
+        "calories": 35,
+        "protein": 2.38,
+        "carbs": 7.18,
+        "fat": 0.41
+      }
+    },
+    {
+      "id": "potato",
+      "fdcId": 170030,
+      "name": "Russet potato, baked with skin",
+      "sourceDescription": "Potatoes, Russet, flesh and skin, baked",
+      "allergens": [],
+      "aliases": [
+        "potato",
+        "potatoes"
+      ],
+      "per100g": {
+        "calories": 95,
+        "protein": 2.63,
+        "carbs": 21.4,
+        "fat": 0.13
+      }
+    },
+    {
+      "id": "oil",
+      "fdcId": 171413,
+      "name": "Olive oil",
+      "sourceDescription": "Oil, olive, salad or cooking",
+      "allergens": [],
+      "aliases": [
+        "oil",
+        "olive oil"
+      ],
+      "per100g": {
+        "calories": 884,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 100
+      }
+    },
+    {
+      "id": "tuna",
+      "fdcId": 173709,
+      "name": "Light tuna, canned in water, drained",
+      "sourceDescription": "Fish, tuna, light, canned in water, drained solids (Includes foods for USDA's Food Distribution Program)",
+      "allergens": [
+        "fish"
+      ],
+      "aliases": [
+        "tuna"
+      ],
+      "per100g": {
+        "calories": 86,
+        "protein": 19.4,
+        "carbs": 0,
+        "fat": 0.96
+      }
+    },
+    {
+      "id": "salmon",
+      "fdcId": 175168,
+      "name": "Atlantic salmon, farmed, cooked",
+      "sourceDescription": "Fish, salmon, Atlantic, farmed, cooked, dry heat",
+      "allergens": [
+        "fish"
+      ],
+      "aliases": [
+        "salmon"
+      ],
+      "per100g": {
+        "calories": 206,
+        "protein": 22.1,
+        "carbs": 0,
+        "fat": 12.4
+      }
+    },
+    {
+      "id": "peanut-butter",
+      "fdcId": 172470,
+      "name": "Peanut butter, smooth, no salt",
+      "sourceDescription": "Peanut butter, smooth style, without salt",
+      "allergens": [
+        "peanut"
+      ],
+      "aliases": [
+        "peanut butter"
+      ],
+      "per100g": {
+        "calories": 598,
+        "protein": 22.2,
+        "carbs": 22.3,
+        "fat": 51.4
+      }
+    },
+    {
+      "id": "bread",
+      "fdcId": 172688,
+      "name": "Whole-wheat bread",
+      "sourceDescription": "Bread, whole-wheat, commercially prepared",
+      "allergens": [
+        "wheat"
+      ],
+      "aliases": [
+        "bread",
+        "whole wheat bread"
+      ],
+      "per100g": {
+        "calories": 252,
+        "protein": 12.4,
+        "carbs": 42.7,
+        "fat": 3.5
+      }
+    },
+    {
+      "id": "eggs",
+      "fdcId": 173424,
+      "name": "Egg, hard-boiled",
+      "sourceDescription": "Egg, whole, cooked, hard-boiled",
+      "allergens": [
+        "egg"
+      ],
+      "aliases": [
+        "egg",
+        "eggs"
+      ],
+      "per100g": {
+        "calories": 155,
+        "protein": 12.6,
+        "carbs": 1.12,
+        "fat": 10.6
+      }
+    },
+    {
+      "id": "beans",
+      "fdcId": 173735,
+      "name": "Black beans, boiled, no salt",
+      "sourceDescription": "Beans, black, mature seeds, cooked, boiled, without salt",
+      "allergens": [],
+      "aliases": [
+        "beans",
+        "black beans"
+      ],
+      "per100g": {
+        "calories": 132,
+        "protein": 8.86,
+        "carbs": 23.7,
+        "fat": 0.54
+      }
+    }
+  ]
+}

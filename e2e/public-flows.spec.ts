@@ -15,6 +15,7 @@ test("public routes render and fit the viewport", async ({
     "/starter-pack",
     "/coaching",
     "/feedback",
+    "/resources",
     "/login",
     "/signup",
   ]) {
@@ -34,6 +35,46 @@ test("public routes render and fit the viewport", async ({
     fullPage: false,
   });
   expect(errors).toEqual([]);
+});
+
+test("publishes only approved free resources and keeps the hero framed", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/resources", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { name: "Free Resources", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('main section a[target="_blank"]')).toHaveCount(8);
+  await expect(
+    page.getByText("NIDDK Body Weight Planner", { exact: false }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("resources.png"),
+    fullPage: true,
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page
+    .locator("main section img")
+    .first()
+    .evaluate(async (image) => {
+      if (image instanceof HTMLImageElement) await image.decode();
+    });
+  expect(
+    await page
+      .locator("main section img")
+      .first()
+      .evaluate(
+        (image) => image instanceof HTMLImageElement && image.naturalWidth > 0,
+      ),
+  ).toBe(true);
+  const membership = await page.locator("#membership").boundingBox();
+  expect(membership!.y).toBeLessThan(
+    testInfo.project.name === "desktop" ? 720 : 740,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("homepage.png"),
+    fullPage: false,
+  });
 });
 
 test("starter plan generates, adjusts, and downloads a PDF", async ({

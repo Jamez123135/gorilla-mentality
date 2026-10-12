@@ -15,7 +15,11 @@ export async function getWorkout(requestedDay = 0) {
   if (!userId) throw new Error("Unauthorized");
   const profile = await prisma.profile.findUnique({ where: { id: userId } });
   if (!profile?.sex || !profile.trainingDays) return null;
-  const sessions = workoutSessions(profile.sex, profile.trainingDays);
+  const sessions = workoutSessions(
+    profile.sex,
+    profile.trainingDays,
+    profile.musclePriority,
+  );
   if (
     !Number.isInteger(requestedDay) ||
     requestedDay < 0 ||
@@ -117,7 +121,11 @@ export async function saveWorkout(input: unknown) {
   const profile = await prisma.profile.findUnique({ where: { id: userId } });
   if (!profile?.sex || !profile.trainingDays)
     throw new Error("Complete your intake first");
-  const sessions = workoutSessions(profile.sex, profile.trainingDays);
+  const sessions = workoutSessions(
+    profile.sex,
+    profile.trainingDays,
+    profile.musclePriority,
+  );
   const session = sessions[dayNumber - 1];
   if (!session) throw new Error("Invalid training day");
   if (finished && !sets.some((set) => set.isCompleted))

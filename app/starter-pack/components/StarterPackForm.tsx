@@ -15,6 +15,11 @@ import {
 import type { IntakeForm } from "@/app/types/starter-pack";
 import { FieldLabel } from "./FieldLabel";
 import { OptionTile } from "./OptionTile";
+import {
+  muscleLabels,
+  musclePriorities,
+  type MusclePriority,
+} from "@/app/lib/muscle-priority";
 
 type Props = {
   form: IntakeForm;
@@ -73,6 +78,28 @@ export function StarterPackForm({
           </section>
 
           <section>
+            <label className="block text-sm font-semibold">
+              Muscle priority (optional)
+              <select
+                value={form.musclePriority || ""}
+                onChange={(event) =>
+                  onChange(
+                    "musclePriority",
+                    event.target.value as MusclePriority | "",
+                  )
+                }
+                className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3"
+              >
+                <option value="">Choose a priority</option>
+                {musclePriorities.map((value) => (
+                  <option key={value} value={value}>
+                    {muscleLabels[value]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+          <section>
             <FieldLabel icon={<User className="h-4 w-4" />}>Sex</FieldLabel>
             <div className="grid gap-3 sm:grid-cols-2">
               {sexOptions.map((sex) => (
@@ -123,7 +150,7 @@ export function StarterPackForm({
                 value={form.age}
                 placeholder="28"
                 type="number"
-                min={13}
+                min={18}
                 max={90}
                 onChange={(value) => onChange("age", value)}
               />

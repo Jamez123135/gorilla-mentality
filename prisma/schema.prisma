@@ -21,19 +21,24 @@ model Profile {
   targetWeight       Float?
   trainingExperience String?
   trainingDays       Int?
+  musclePriority     String? @default("balanced")
 
   // Nutrition Targets
   targetCalories Int?
   targetProtein  Int?
 
   // Relations
-  workoutLogs     WorkoutLog[]
-  nutritionLogs   NutritionLog[]
-  progressPhotos  ProgressPhoto[]
-  applications    CoachingApplication[]
-  mealEntries     MealEntry[]
-  weightEntries   WeightEntry[]
-  workoutSessions WorkoutSession[]
+  workoutLogs       WorkoutLog[]
+  nutritionLogs     NutritionLog[]
+  progressPhotos    ProgressPhoto[]
+  applications      CoachingApplication[]
+  mealEntries       MealEntry[]
+  weightEntries     WeightEntry[]
+  workoutSessions   WorkoutSession[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  communityLikes    CommunityLike[]
+  communityReports  CommunityReport[]
 
   @@map("profiles")
 }
@@ -171,4 +176,62 @@ model WorkoutSession {
   @@unique([userId, workoutDate])
   @@index([userId, planKey, workoutDate])
   @@map("workout_sessions")
+}
+
+model CommunityPost {
+  id         String             @id @default(uuid())
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  userId     String
+  authorName String
+  body       String
+  category   String
+  profile    Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments   CommunityComment[]
+  likes      CommunityLike[]
+  reports    CommunityReport[]
+
+  @@index([createdAt, id])
+  @@index([userId, createdAt])
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id         String        @id @default(uuid())
+  createdAt  DateTime      @default(now())
+  userId     String
+  postId     String
+  authorName String
+  body       String
+  profile    Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+  @@map("community_comments")
+}
+
+model CommunityLike {
+  userId  String
+  postId  String
+  profile Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+  @@map("community_likes")
+}
+
+model CommunityReport {
+  id        String        @id @default(uuid())
+  createdAt DateTime      @default(now())
+  userId    String
+  postId    String
+  reason    String
+  profile   Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([createdAt])
+  @@map("community_reports")
 }

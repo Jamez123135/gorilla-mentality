@@ -30,7 +30,10 @@ export function SiteFooter() {
 
           <div className="flex flex-col gap-2">
             <span className="font-semibold text-zinc-100">Product</span>
-            <Link href="/starter-pack" className="text-zinc-400 hover:text-white">
+            <Link
+              href="/starter-pack"
+              className="text-zinc-400 hover:text-white"
+            >
               Starter Pack
             </Link>
             <Link href="/coaching" className="text-zinc-400 hover:text-white">
@@ -41,6 +44,9 @@ export function SiteFooter() {
             </Link>
             <Link href="/dashboard" className="text-zinc-400 hover:text-white">
               Member Area
+            </Link>
+            <Link href="/resources" className="text-zinc-400 hover:text-white">
+              Free Resources
             </Link>
           </div>
         </div>
