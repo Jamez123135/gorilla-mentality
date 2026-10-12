@@ -40,6 +40,9 @@ test("starter plan generates, adjusts, and downloads a PDF", async ({
   page,
 }, testInfo) => {
   await page.goto("/starter-pack");
+  await expect(page.locator('[aria-pressed="true"]')).toHaveCount(0);
+  await page.getByRole("button", { name: /Lose fat/ }).click();
+  await page.getByRole("button", { name: /Returning/ }).click();
   await page.getByLabel("Name", { exact: true }).fill("Alex");
   await page.getByLabel("Age", { exact: true }).fill("28");
   await page.getByLabel("Height", { exact: true }).fill("178 cm");

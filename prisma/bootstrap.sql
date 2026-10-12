@@ -56,4 +56,12 @@ CREATE TABLE IF NOT EXISTS "weight_entries" (
   "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   "logDate" DATE NOT NULL, "weightLb" DOUBLE PRECISION NOT NULL, UNIQUE ("userId", "logDate")
 );
+CREATE TABLE IF NOT EXISTS "workout_sessions" (
+  "id" TEXT PRIMARY KEY,
+  "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "workoutDate" TIMESTAMP(3) NOT NULL, "planKey" TEXT NOT NULL, "dayNumber" INTEGER NOT NULL,
+  "title" TEXT NOT NULL, "isCompleted" BOOLEAN NOT NULL DEFAULT false, "effort" TEXT,
+  UNIQUE ("userId", "workoutDate")
+);
+CREATE INDEX IF NOT EXISTS "workout_sessions_userId_planKey_workoutDate_idx" ON "workout_sessions"("userId", "planKey", "workoutDate");
 COMMIT;

@@ -23,13 +23,12 @@ export async function getDashboard(
     prisma.nutritionLog.findUnique({
       where: { userId_logDate: { userId, logDate } },
     }),
-    prisma.workoutLog.findMany({
+    prisma.workoutSession.count({
       where: {
         userId,
+        isCompleted: true,
         workoutDate: { gte: new Date(weekStart), lt: new Date(weekEnd) },
       },
-      distinct: ["workoutDate"],
-      select: { workoutDate: true },
     }),
     prisma.weightEntry.findFirst({
       where: { userId },
@@ -40,7 +39,7 @@ export async function getDashboard(
     profile,
     totals: mealTotals(meals, legacy),
     mealCount: meals.length,
-    workoutsThisWeek: sessions.length,
+    workoutsThisWeek: sessions,
     latestWeight: weight?.weightLb ?? null,
   };
 }

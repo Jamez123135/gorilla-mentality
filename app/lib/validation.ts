@@ -38,6 +38,12 @@ export const weightInput = z.object({
 export const workoutInput = z
   .object({
     workoutDate: z.iso.datetime(),
+    dayNumber: z.number().int().min(1).max(6).default(1),
+    finished: z.boolean().default(false),
+    effort: z
+      .enum(["comfortable", "challenging", "too-heavy"])
+      .nullable()
+      .default(null),
     sets: z
       .array(
         z

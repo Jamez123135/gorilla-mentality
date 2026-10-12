@@ -8,7 +8,7 @@ import {
 import type {
   Experience,
   Goal,
-  IntakeForm,
+  CompletedIntakeForm,
   Meal,
   Sex,
   StarterPlan,
@@ -60,7 +60,7 @@ const splitStrategies: Record<Sex, SplitStrategy> = {
   female: femaleSplitStrategy,
 };
 
-export function createStarterPlan(form: IntakeForm): StarterPlan {
+export function createStarterPlan(form: CompletedIntakeForm): StarterPlan {
   const firstName = form.name.trim().split(" ")[0] || "Your";
   const nutrition = getNutritionTargets(form);
   const splitStrategy = splitStrategies[form.sex];
@@ -104,7 +104,7 @@ function roundToNearest(value: number, nearest: number) {
   return Math.round(value / nearest) * nearest;
 }
 
-function getNutritionTargets(form: IntakeForm) {
+function getNutritionTargets(form: CompletedIntakeForm) {
   const weightLb = parseWeightInPounds(form.weight, form.sex);
   const maintenance = weightLb * (form.sex === "male" ? 14 : 13);
 

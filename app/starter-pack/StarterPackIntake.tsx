@@ -5,15 +5,25 @@ import Link from "next/link";
 import { ArrowLeft, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { initialIntakeForm } from "@/app/data/starter-pack/options";
-import { createStarterPlan, parseWeightInPounds } from "@/app/lib/starter-pack/plan-generator";
+import {
+  initialIntakeForm,
+  isIntakeComplete,
+} from "@/app/data/starter-pack/options";
+import {
+  createStarterPlan,
+  parseWeightInPounds,
+} from "@/app/lib/starter-pack/plan-generator";
 import type { IntakeForm } from "@/app/types/starter-pack";
 import { GeneratedPlan } from "./components/GeneratedPlan";
 import { PlanStepper } from "./components/PlanStepper";
 import { StarterPackForm } from "./components/StarterPackForm";
 import { useUser } from "@clerk/nextjs";
 
-export default function StarterPackIntake({ authEnabled }: { authEnabled: boolean }) {
+export default function StarterPackIntake({
+  authEnabled,
+}: {
+  authEnabled: boolean;
+}) {
   return authEnabled ? <AuthenticatedIntake /> : <Intake user={null} />;
 }
 
@@ -27,16 +37,27 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // The form is the only source of truth. The plan is derived from it, which
   // keeps state predictable and prevents stale generated output.
-  const plan = useMemo(() => createStarterPlan(form), [form]);
+  const plan = useMemo(
+    () => (isIntakeComplete(form) ? createStarterPlan(form) : null),
+    [form],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isIntakeComplete(form) || !plan) {
+      setFormError(
+        "Choose your goal, sex, training days, and experience before generating your routine.",
+      );
+      return;
+    }
+    setFormError(null);
     setLoading(true);
     setSyncError(null);
-    
+
     try {
       if (user) {
         // Sync with Neon DB via our new API route
@@ -52,14 +73,18 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
             trainingExperience: form.experience,
             // Calculate and save nutrition targets
             targetCalories: plan.nutrition.calories,
-            targetProtein: Math.round((plan.nutrition.proteinMin + plan.nutrition.proteinMax) / 2),
+            targetProtein: Math.round(
+              (plan.nutrition.proteinMin + plan.nutrition.proteinMax) / 2,
+            ),
           }),
         });
         if (!response.ok) throw new Error("Profile save failed");
       }
     } catch (e) {
       console.error("Sync error:", e);
-      setSyncError("Your plan is ready, but your dashboard could not be updated. Please try generating it again.");
+      setSyncError(
+        "Your plan is ready, but your dashboard could not be updated. Please try generating it again.",
+      );
     } finally {
       setLoading(false);
       setGenerated(true);
@@ -76,12 +101,6 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50 selection:bg-white selection:text-zinc-950">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:56px_56px]" />
-        <div className="absolute -top-40 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-white/12 blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] h-[32rem] w-[32rem] rounded-full bg-white/8 blur-[120px]" />
-      </div>
-
       <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4">
           <Link href="/" className="group flex items-center gap-3">
@@ -112,7 +131,7 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
             </Link>
             <Link
               href="/coaching"
-              className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-white"
+              className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
             >
               Coaching
             </Link>
@@ -122,13 +141,29 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
             >
               Feedback
             </Link>
-            <Link href="/dashboard" title="Member area" aria-label="Member area" className="rounded-lg border border-zinc-800 p-2 text-zinc-300 hover:text-white"><UserRound className="h-5 w-5" /></Link>
+            <Link
+              href="/dashboard"
+              title="Member area"
+              aria-label="Member area"
+              className="rounded-lg border border-zinc-800 p-2 text-zinc-300 hover:text-white"
+            >
+              <UserRound className="h-5 w-5" />
+            </Link>
           </nav>
         </div>
       </header>
 
       <section className="mx-auto w-full max-w-6xl px-5 py-10 md:py-14">
-        {syncError && <p role="alert" className="mb-6 text-amber-400">{syncError}</p>}
+        {syncError && (
+          <p role="alert" className="mb-6 text-amber-400">
+            {syncError}
+          </p>
+        )}
+        {formError && (
+          <p role="alert" className="mb-6 text-red-400">
+            {formError}
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[0.82fr_1.18fr]">
           <aside className="lg:sticky lg:top-28 lg:h-fit">
             <p className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1 text-xs text-zinc-300 backdrop-blur-sm">
@@ -156,14 +191,14 @@ function Intake({ user }: { user: { id: string } | null | undefined }) {
               onChange={updateForm}
               isLoading={loading}
             />
-          ) : (
+          ) : plan && isIntakeComplete(form) ? (
             <GeneratedPlan
               plan={plan}
               goal={form.goal}
               days={form.days}
               onAdjust={() => setGenerated(false)}
             />
-          )}
+          ) : null}
         </div>
       </section>
     </main>

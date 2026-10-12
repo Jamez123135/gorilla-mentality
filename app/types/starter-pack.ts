@@ -4,7 +4,7 @@ export type Sex = "male" | "female";
 
 export type Experience = "new" | "returning" | "consistent";
 
-export type IntakeForm = {
+export type CompletedIntakeForm = {
   name: string;
   goal: Goal;
   sex: Sex;
@@ -13,6 +13,16 @@ export type IntakeForm = {
   height: string;
   weight: string;
   experience: Experience;
+};
+
+export type IntakeForm = Omit<
+  CompletedIntakeForm,
+  "goal" | "sex" | "days" | "experience"
+> & {
+  goal: Goal | "";
+  sex: Sex | "";
+  days: number | null;
+  experience: Experience | "";
 };
 
 export type SelectOption<T extends string | number> = {

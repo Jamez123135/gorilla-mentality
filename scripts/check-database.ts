@@ -6,6 +6,7 @@ Promise.all([
   prisma.workoutTemplate.findFirst(), prisma.workoutLog.findFirst(),
   prisma.nutritionLog.findFirst(), prisma.progressPhoto.findFirst(),
   prisma.mealEntry.findFirst(), prisma.weightEntry.findFirst(),
+  prisma.workoutSession.findFirst(),
 ]).then(() => {
   console.log("Database connection and tracking tables verified. No data changed.");
 }).catch(error => {

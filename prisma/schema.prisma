@@ -27,12 +27,13 @@ model Profile {
   targetProtein  Int?
 
   // Relations
-  workoutLogs    WorkoutLog[]
-  nutritionLogs  NutritionLog[]
-  progressPhotos ProgressPhoto[]
-  applications   CoachingApplication[]
-  mealEntries    MealEntry[]
-  weightEntries  WeightEntry[]
+  workoutLogs     WorkoutLog[]
+  nutritionLogs   NutritionLog[]
+  progressPhotos  ProgressPhoto[]
+  applications    CoachingApplication[]
+  mealEntries     MealEntry[]
+  weightEntries   WeightEntry[]
+  workoutSessions WorkoutSession[]
 
   @@map("profiles")
 }
@@ -154,4 +155,20 @@ model WeightEntry {
 
   @@unique([userId, logDate])
   @@map("weight_entries")
+}
+
+model WorkoutSession {
+  id          String   @id @default(uuid())
+  userId      String
+  workoutDate DateTime
+  planKey     String
+  dayNumber   Int
+  title       String
+  isCompleted Boolean  @default(false)
+  effort      String?
+  profile     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workoutDate])
+  @@index([userId, planKey, workoutDate])
+  @@map("workout_sessions")
 }

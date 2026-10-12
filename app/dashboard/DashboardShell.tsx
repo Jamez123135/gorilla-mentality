@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import {
@@ -34,8 +35,22 @@ export default function DashboardShell({
     <div className="min-h-screen bg-zinc-950 text-white md:flex">
       <aside className="border-b md:border-b-0 md:border-r border-zinc-800 bg-zinc-900 md:w-56 md:shrink-0">
         <div className="flex items-center justify-between p-4 md:p-6">
-          <Link href="/dashboard" className="text-xl font-black uppercase">
-            Gorilla <span className="text-yellow-500">Hub</span>
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/brand.png"
+              alt="Gorilla Mentality"
+              width={36}
+              height={44}
+              className="shrink-0 rounded object-cover"
+            />
+            <div>
+              <p className="text-sm font-bold leading-tight">
+                Gorilla <span className="text-yellow-500">Mentality</span>
+              </p>
+              <p className="mt-1 text-[10px] uppercase text-zinc-400">
+                Member Hub
+              </p>
+            </div>
           </Link>
           <Link
             href="/"

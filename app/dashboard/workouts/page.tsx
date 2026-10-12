@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle2, Save } from "lucide-react";
+import { CheckCircle2, Save, ArrowRight } from "lucide-react";
 import { getWorkout, saveWorkout } from "@/app/lib/actions/workouts";
 
 type SetLog = { weight: string; reps: string; completed: boolean };
@@ -17,7 +17,9 @@ type Workout = Omit<
 
 export default function WorkoutLogger() {
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [day, setDay] = useState(1);
+  const [day, setDay] = useState(0);
+  const [reload, setReload] = useState(0);
+  const [effort, setEffort] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [workoutDate, setWorkoutDate] = useState("");
@@ -39,16 +41,29 @@ export default function WorkoutLogger() {
                 ...result,
                 exercises: result.exercises.map((ex) => ({
                   ...ex,
-                  entries: Array.from({ length: ex.sets }, () => ({
-                    weight: "",
-                    reps: "",
-                    completed: false,
-                  })),
+                  entries: Array.from({ length: ex.sets }, (_, index) => {
+                    const saved = ex.savedSets.find(
+                      (set) => set.setNumber === index + 1,
+                    );
+                    return {
+                      weight:
+                        saved?.weight !== null && saved?.weight !== undefined
+                          ? String(saved.weight)
+                          : "",
+                      reps:
+                        saved?.reps !== null && saved?.reps !== undefined
+                          ? String(saved.reps)
+                          : "",
+                      completed: saved?.isCompleted ?? false,
+                    };
+                  }),
                 })),
               }
             : null,
         );
-        setWorkoutDate(new Date().toISOString());
+        setWorkoutDate(result?.workoutDate || "");
+        setEffort(result?.effort || "");
+        if (result?.resumed) setMessage("Saved session resumed.");
       } catch {
         if (active) {
           setWorkout(null);
@@ -62,7 +77,7 @@ export default function WorkoutLogger() {
     return () => {
       active = false;
     };
-  }, [day]);
+  }, [day, reload]);
 
   function updateSet(
     exIndex: number,
@@ -89,7 +104,7 @@ export default function WorkoutLogger() {
     );
   }
 
-  async function save() {
+  async function save(finished = false) {
     if (!workout || saving) return;
     const sets = workout.exercises.flatMap((ex) =>
       ex.entries.flatMap((entry, i) =>
@@ -108,6 +123,10 @@ export default function WorkoutLogger() {
     );
     if (!sets.length) {
       setError("Enter weight or reps for at least one set.");
+      return;
+    }
+    if (finished && !sets.some((set) => set.isCompleted)) {
+      setError("Mark at least one performed set complete before finishing.");
       return;
     }
     if (
@@ -130,8 +149,22 @@ export default function WorkoutLogger() {
     setError(null);
     setMessage(null);
     try {
-      await saveWorkout({ workoutDate, sets });
-      setMessage("Session saved.");
+      await saveWorkout({
+        workoutDate,
+        sets,
+        dayNumber: workout.day,
+        finished,
+        effort: effort || null,
+      });
+      setMessage(
+        finished
+          ? "Session finished. Your next workout is ready."
+          : "Session saved.",
+      );
+      if (finished)
+        setWorkout((current) =>
+          current ? { ...current, isCompleted: true } : null,
+        );
     } catch {
       setError(
         "Unable to save your session. Your entries are still here; please try again.",
@@ -172,11 +205,15 @@ export default function WorkoutLogger() {
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black break-words">{workout.title}</h1>
+          <p className="mt-2 text-sm text-zinc-400">
+            Day {workout.day} of {workout.days}
+            {workout.resumed ? " / saved session" : " / next session"}
+          </p>
           <label className="mt-3 flex items-center gap-3 text-sm text-zinc-400">
             Training day
             <select
               value={day}
-              disabled={saving}
+              disabled={saving || workout.isCompleted}
               onChange={(e) => {
                 const hasEntries = workout.exercises.some((ex) =>
                   ex.entries.some((entry) => entry.weight || entry.reps),
@@ -193,6 +230,7 @@ export default function WorkoutLogger() {
               }}
               className="rounded-lg bg-zinc-900 p-2 text-white border border-zinc-700"
             >
+              <option value={0}>Next planned day</option>
               {Array.from({ length: workout.days }, (_, i) => (
                 <option key={i} value={i + 1}>
                   Day {i + 1}
@@ -202,8 +240,8 @@ export default function WorkoutLogger() {
           </label>
         </div>
         <button
-          onClick={save}
-          disabled={saving}
+          onClick={() => save()}
+          disabled={saving || workout.isCompleted}
           className="flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black disabled:opacity-50"
         >
           <Save className="h-5 w-5" />
@@ -220,6 +258,19 @@ export default function WorkoutLogger() {
           {message}
         </p>
       )}
+      {workout.isCompleted && (
+        <button
+          type="button"
+          onClick={() => {
+            setDay(0);
+            setReload((value) => value + 1);
+          }}
+          className="mb-6 inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black"
+        >
+          Next Workout
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      )}
       <div className="space-y-6">
         {workout.exercises.map((ex, exIndex) => (
           <section
@@ -227,10 +278,25 @@ export default function WorkoutLogger() {
             className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 md:p-6"
           >
             <h2 className="text-xl font-bold">{ex.name}</h2>
-            <p className="mb-4 mt-1 text-sm text-zinc-400">
-              Target: {ex.reps} reps
+            <p className="mt-1 text-sm text-zinc-400">
+              Target: {ex.progression.reps}
+              {ex.reps.includes("sec") ? "" : " reps"}
+              {ex.progression.weight !== null
+                ? ` / ${ex.progression.weight} lb`
+                : ""}
             </p>
-            <fieldset disabled={saving} className="space-y-3">
+            {ex.progression.previous && (
+              <p className="mt-2 text-xs text-zinc-500">
+                Last completed: {ex.progression.previous}
+              </p>
+            )}
+            <p className="mb-4 mt-2 text-xs text-yellow-500">
+              {ex.progression.reason}
+            </p>
+            <fieldset
+              disabled={saving || workout.isCompleted}
+              className="space-y-3"
+            >
               <legend className="sr-only">Sets for {ex.name}</legend>
               {ex.entries.map((entry, i) => (
                 <div
@@ -244,7 +310,11 @@ export default function WorkoutLogger() {
                     min="0"
                     max="3000"
                     step="any"
-                    placeholder="Weight (lb)"
+                    placeholder={
+                      ex.progression.weight !== null
+                        ? `${ex.progression.weight} lb`
+                        : "Weight (lb)"
+                    }
                     value={entry.weight}
                     onChange={(e) =>
                       updateSet(exIndex, i, { weight: e.target.value })
@@ -257,7 +327,7 @@ export default function WorkoutLogger() {
                     min="0"
                     max="1000"
                     step="1"
-                    placeholder="Reps"
+                    placeholder={ex.reps.includes("sec") ? "Seconds" : "Reps"}
                     value={entry.reps}
                     onChange={(e) =>
                       updateSet(exIndex, i, { reps: e.target.value })
@@ -282,6 +352,33 @@ export default function WorkoutLogger() {
           </section>
         ))}
       </div>
+      {!workout.isCompleted && (
+        <section className="mt-8 flex flex-wrap items-end justify-between gap-4 border-t border-zinc-800 pt-6">
+          <label className="text-sm text-zinc-400">
+            Session effort
+            <select
+              value={effort}
+              disabled={saving}
+              onChange={(event) => setEffort(event.target.value)}
+              className="mt-2 block rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+            >
+              <option value="">Choose effort (optional)</option>
+              <option value="comfortable">Comfortable</option>
+              <option value="challenging">Challenging</option>
+              <option value="too-heavy">Too heavy</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => save(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-5 w-5" />
+            Finish Session
+          </button>
+        </section>
+      )}
     </main>
   );
 }

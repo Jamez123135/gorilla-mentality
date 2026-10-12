@@ -107,7 +107,7 @@ export function GeneratedPlan({
           type="button"
           onClick={handleSavePdf}
           disabled={isSavingPdf}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-bold text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-zinc-200 active:scale-[0.98]"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-black transition hover:bg-yellow-400 disabled:opacity-50"
         >
           <Download className="h-4 w-4" aria-hidden="true" />
           {isSavingPdf ? "Preparing PDF..." : "Save PDF"}

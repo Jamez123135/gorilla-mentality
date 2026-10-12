@@ -67,6 +67,10 @@ test.describe("free member tracking", () => {
     });
 
     await page.goto("/starter-pack");
+    await page.getByRole("button", { name: /Lose fat/ }).click();
+    await page.getByRole("button", { name: "Male", exact: true }).click();
+    await page.getByRole("button", { name: /5 days/ }).click();
+    await page.getByRole("button", { name: /Returning/ }).click();
     await page.getByLabel("Name", { exact: true }).fill("TestMember");
     await page.getByLabel("Age", { exact: true }).fill("28");
     await page.getByLabel("Height", { exact: true }).fill("178 cm");
@@ -86,6 +90,32 @@ test.describe("free member tracking", () => {
     await page.getByRole("button", { name: "Save Session" }).click();
     await expect(
       page.getByText("Session saved.", { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByText("Saved session resumed.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("spinbutton", { name: /weight/ }).first(),
+    ).toHaveValue("100");
+    await page
+      .getByRole("button", { name: /set 1 complete/ })
+      .first()
+      .click();
+    await page.getByLabel("Session effort").selectOption("challenging");
+    await page
+      .getByRole("button", { name: "Finish Session", exact: true })
+      .click();
+    await expect(
+      page.getByText("Session finished. Your next workout is ready.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Next Workout", exact: true })
+      .click();
+    await expect(
+      page.getByText("Day 2 of 5 / next session", { exact: true }),
     ).toBeVisible();
     await page
       .getByRole("link", { name: "Workout history", exact: true })
@@ -162,6 +192,9 @@ test("creates a free account through the sign-up form", async ({
   try {
     await setupClerkTestingToken({ page });
     await page.goto("/signup");
+    await expect(
+      page.getByText("Development mode", { exact: true }),
+    ).toHaveCount(0);
     await page.getByLabel("Email address", { exact: true }).fill(email);
     await page
       .getByLabel("Password", { exact: true })
@@ -173,7 +206,7 @@ test("creates a free account through the sign-up form", async ({
     await page
       .getByLabel("Enter verification code", { exact: true })
       .fill("424242");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 20000 });
     await expect(
       page.getByText("Free Membership", { exact: true }),

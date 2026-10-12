@@ -1,4 +1,11 @@
-import type { Experience, Goal, IntakeForm, SelectOption, Sex } from "@/app/types/starter-pack";
+import type {
+  CompletedIntakeForm,
+  Experience,
+  Goal,
+  IntakeForm,
+  SelectOption,
+  Sex,
+} from "@/app/types/starter-pack";
 
 export const goalOptions: SelectOption<Goal>[] = [
   {
@@ -43,14 +50,29 @@ export const experienceOptions: SelectOption<Experience>[] = [
 
 export const initialIntakeForm: IntakeForm = {
   name: "",
-  goal: "fat-loss",
-  sex: "male",
-  days: 5,
+  goal: "",
+  sex: "",
+  days: null,
   age: "",
   height: "",
   weight: "",
-  experience: "returning",
+  experience: "",
 };
+
+export function isIntakeComplete(
+  form: IntakeForm,
+): form is CompletedIntakeForm {
+  return Boolean(
+    form.goal &&
+    form.sex &&
+    form.days &&
+    form.experience &&
+    form.name.trim() &&
+    form.age &&
+    form.height.trim() &&
+    form.weight.trim(),
+  );
+}
 
 export function getTrainingDayDescription(days: number, sex: Sex) {
   if (sex === "female") {

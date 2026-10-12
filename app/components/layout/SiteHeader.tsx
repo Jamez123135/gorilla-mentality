@@ -44,7 +44,7 @@ export function SiteHeader({
               href={link.href}
               className={
                 link.variant === "primary"
-                  ? "rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_60px_-30px_rgba(255,255,255,0.55)] active:scale-[0.98]"
+                  ? "rounded-lg bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-yellow-400"
                   : "hidden rounded-xl border border-zinc-800 px-4 py-2 text-sm text-zinc-100 transition-all hover:-translate-y-0.5 hover:border-zinc-600 hover:bg-zinc-900 md:inline-flex"
               }
             >

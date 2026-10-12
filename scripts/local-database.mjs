@@ -7,11 +7,13 @@ dotenv.config({ path: ".env.local", quiet: true });
 const databaseUrl =
   "postgresql://gorilla:gorilla-local-only@127.0.0.1:54329/gorilla_mentality";
 const configuredUrl = process.env.DATABASE_URL || "";
-if (
-  configuredUrl &&
-  configuredUrl !== databaseUrl &&
-  !configuredUrl.includes("your-neon-hostname")
-) {
+let placeholderUrl = false;
+try {
+  const hostname = new URL(configuredUrl).hostname.toLowerCase();
+  placeholderUrl =
+    hostname === "host" || hostname === "your-neon-hostname.aws.neon.tech";
+} catch {}
+if (configuredUrl && configuredUrl !== databaseUrl && !placeholderUrl) {
   throw new Error(
     "A different database is already configured. Local setup will not replace it.",
   );
