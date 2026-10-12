@@ -10,7 +10,7 @@
     "prisma:seed": "npx ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.9.14",
+    "@clerk/nextjs": "7.9.14",
     "@prisma/client": "5.22.0",
     "@stripe/stripe-js": "^10.0.0",
     "framer-motion": "^12.29.2",
