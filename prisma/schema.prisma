@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Profile {
-  id                 String   @id // This will be the Clerk User ID
+  id                 String   @id // Clerk User ID
   updatedAt          DateTime @updatedAt
   username           String?  @unique
   fullName           String?
   avatarUrl          String?
   
   // Intake Data
-  sex                String?  // 'male' or 'female'
-  goal               String?  // 'fat loss', 'muscle gain', 'recomp'
+  sex                String?
+  goal               String?
   currentWeight      Float?
   targetWeight       Float?
   trainingExperience String?
@@ -30,8 +30,25 @@ model Profile {
   workoutLogs        WorkoutLog[]
   nutritionLogs      NutritionLog[]
   progressPhotos     ProgressPhoto[]
+  applications       CoachingApplication[]
 
   @@map("profiles")
+}
+
+model CoachingApplication {
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now())
+  userId        String
+  fullName      String
+  email         String
+  currentGoal   String
+  experience    String
+  message       String
+  status        String   @default("pending") // pending, approved, rejected
+  
+  profile       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coaching_applications")
 }
 
 model Exercise {
@@ -43,7 +60,6 @@ model Exercise {
   instructions String?
   isActive     Boolean  @default(true)
   
-  // Relations
   workoutTemplates WorkoutTemplate[]
   workoutLogs      WorkoutLog[]
 
@@ -60,7 +76,6 @@ model WorkoutTemplate {
   defaultReps   String
   notes        String?
   
-  // Relations
   exercise    Exercise @relation(fields: [exerciseId], references: [id])
   exerciseId  String
 
@@ -78,7 +93,6 @@ model WorkoutLog {
   workoutDate  DateTime @default(now())
   isCompleted  Boolean  @default(false)
   
-  // Relations
   profile      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercise     Exercise @relation(fields: [exerciseId], references: [id])
 
@@ -93,7 +107,6 @@ model NutritionLog {
   calories   Int?
   protein    Int?
   
-  // Relations
   profile    Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, logDate])
@@ -107,7 +120,6 @@ model ProgressPhoto {
   url       String
   label     String?
   
-  // Relations
   profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("progress_photos")
