@@ -39,6 +39,8 @@ model Profile {
   communityComments CommunityComment[]
   communityLikes    CommunityLike[]
   communityReports  CommunityReport[]
+  customFoods       CustomFood[]
+  pantry            MemberPantry?
 
   @@map("profiles")
 }
@@ -134,18 +136,19 @@ model ProgressPhoto {
 }
 
 model MealEntry {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  userId    String
-  logDate   DateTime @db.Date
-  name      String
-  mealType  String
-  portion   String?
-  calories  Int
-  protein   Float    @default(0)
-  carbs     Float    @default(0)
-  fat       Float    @default(0)
-  profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  userId      String
+  logDate     DateTime @db.Date
+  name        String
+  mealType    String
+  portion     String?
+  calories    Int
+  protein     Float    @default(0)
+  carbs       Float    @default(0)
+  fat         Float    @default(0)
+  ingredients Json?
+  profile     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, logDate])
   @@map("meal_entries")
@@ -234,4 +237,36 @@ model CommunityReport {
   @@unique([userId, postId])
   @@index([createdAt])
   @@map("community_reports")
+}
+
+model CustomFood {
+  id            String   @id @default(uuid())
+  userId        String
+  createdAt     DateTime @default(now())
+  name          String
+  brand         String?
+  preparation   String
+  role          String
+  diet          String
+  calories      Float
+  protein       Float
+  carbs         Float
+  fat           Float
+  allergens     String[]
+  labelReviewed Boolean  @default(false)
+  reference     String
+  profile       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("custom_foods")
+}
+
+model MemberPantry {
+  userId      String   @id
+  updatedAt   DateTime @updatedAt
+  foodIds     String[]
+  preferences Json
+  profile     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("member_pantries")
 }

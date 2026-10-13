@@ -93,4 +93,17 @@ CREATE TABLE IF NOT EXISTS "community_reports" (
   "reason" TEXT NOT NULL, UNIQUE ("userId", "postId")
 );
 CREATE INDEX IF NOT EXISTS "community_reports_createdAt_idx" ON "community_reports"("createdAt");
+ALTER TABLE "meal_entries" ADD COLUMN IF NOT EXISTS "ingredients" JSONB;
+CREATE TABLE IF NOT EXISTS "custom_foods" (
+  "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "name" TEXT NOT NULL, "brand" TEXT,
+  "preparation" TEXT NOT NULL, "role" TEXT NOT NULL, "diet" TEXT NOT NULL,
+  "calories" DOUBLE PRECISION NOT NULL, "protein" DOUBLE PRECISION NOT NULL, "carbs" DOUBLE PRECISION NOT NULL, "fat" DOUBLE PRECISION NOT NULL,
+  "allergens" TEXT[] NOT NULL, "labelReviewed" BOOLEAN NOT NULL DEFAULT false, "reference" TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "custom_foods_userId_idx" ON "custom_foods"("userId");
+CREATE TABLE IF NOT EXISTS "member_pantries" (
+  "userId" TEXT PRIMARY KEY REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "updatedAt" TIMESTAMP(3) NOT NULL, "foodIds" TEXT[] NOT NULL, "preferences" JSONB NOT NULL
+);
 COMMIT;

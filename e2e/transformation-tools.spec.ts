@@ -123,7 +123,9 @@ test.describe("transformation tools", () => {
 
     await page.goto("/dashboard/nutrition");
     await page.getByLabel("Calculated meal name").fill("Weighed chicken");
-    await page.getByLabel("Food ingredient").selectOption("chicken");
+    await page
+      .getByLabel("Food ingredient", { exact: true })
+      .selectOption("chicken");
     await page
       .getByRole("button", { name: "Add ingredient", exact: true })
       .click();
@@ -138,7 +140,7 @@ test.describe("transformation tools", () => {
     ).toBeVisible();
     await page.getByRole("tab", { name: "Pantry ideas" }).click();
     await page
-      .getByLabel("Available ingredients")
+      .getByLabel("Available ingredients", { exact: true })
       .fill("chicken, rice, broccoli");
     await page.getByLabel("Meal calorie budget").fill("500");
     await page.getByLabel("Meal protein target (g)").fill("35");

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, X, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Save, RefreshCw } from "lucide-react";
 import {
   getNutritionDiary,
   saveMeal,
@@ -12,6 +12,7 @@ import {
 import { localDate } from "@/app/lib/validation";
 import { mealTotals } from "@/app/lib/tracking-summary";
 import FoodTools from "./FoodTools";
+import MealIngredients from "./MealIngredients";
 
 type Diary = Awaited<ReturnType<typeof getNutritionDiary>>;
 const emptyMeal = {
@@ -28,6 +29,7 @@ const inputClass =
 
 export default function NutritionTracker() {
   const [date, setDate] = useState(localDate);
+  const selectedDate = useRef(date);
   const [diary, setDiary] = useState<Diary | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -35,6 +37,7 @@ export default function NutritionTracker() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -60,10 +63,11 @@ export default function NutritionTracker() {
     return () => {
       active = false;
     };
-  }, [date]);
+  }, [date, reload]);
 
   async function refresh() {
-    setDiary(await getNutritionDiary(date));
+    const data = await getNutritionDiary(date);
+    if (selectedDate.current === date) setDiary(data);
   }
 
   async function submit(event: React.FormEvent) {
@@ -132,7 +136,10 @@ export default function NutritionTracker() {
             value={date}
             disabled={busy}
             onChange={(e) => {
-              if (e.target.value) setDate(e.target.value);
+              if (e.target.value) {
+                selectedDate.current = e.target.value;
+                setDate(e.target.value);
+              }
             }}
             className={inputClass + " [color-scheme:dark]"}
           />
@@ -141,6 +148,17 @@ export default function NutritionTracker() {
       {error && (
         <p role="alert" className="mb-4 text-red-400">
           {error}
+          {!diary && (
+            <button
+              type="button"
+              aria-label="Retry food diary"
+              title="Retry food diary"
+              onClick={() => setReload((value) => value + 1)}
+              className="ml-3 p-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
         </p>
       )}
       {message && (
@@ -262,6 +280,7 @@ export default function NutritionTracker() {
                         {meal.mealType}
                       </p>
                       <p className="break-words font-medium">{meal.name}</p>
+                      <MealIngredients value={meal.ingredients} />
                       {meal.portion && (
                         <p className="break-words text-sm text-zinc-400">
                           {meal.portion}
@@ -319,6 +338,13 @@ export default function NutritionTracker() {
               <h2 className="mb-4 text-xl font-semibold">
                 {editingId ? "Edit meal" : "Add meal"}
               </h2>
+              {editingId &&
+                diary.meals.find((meal) => meal.id === editingId)
+                  ?.ingredients && (
+                  <p className="mb-4 text-xs text-amber-400">
+                    Manual changes replace the calculated ingredient breakdown.
+                  </p>
+                )}
               <fieldset disabled={busy} className="min-w-0">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="text-sm text-zinc-400">

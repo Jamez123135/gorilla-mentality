@@ -20,12 +20,12 @@ arranged directly with the coach; there is no membership paywall or checkout.
 
 Required member-service settings:
 
-| Variable | Value |
-| --- | --- |
-| `DATABASE_URL` | The PostgreSQL connection string from your Neon/database dashboard, with TLS enabled. |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk's publishable key for this app and environment. |
-| `CLERK_SECRET_KEY` | The secret key from the same Clerk instance. |
-| `NEXT_PUBLIC_URL` | The site's public URL (optional; currently unused by core flows). |
+| Variable                            | Value                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                      | The PostgreSQL connection string from your Neon/database dashboard, with TLS enabled. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk's publishable key for this app and environment.                                 |
+| `CLERK_SECRET_KEY`                  | The secret key from the same Clerk instance.                                          |
+| `NEXT_PUBLIC_URL`                   | The site's public URL (optional; currently unused by core flows).                     |
 
 Set these in Vercel for Production, and also for Preview if testing preview
 deployments. Redeploy after changing environment variables. Clerk's production
@@ -103,14 +103,18 @@ separately from the browser suite.
   two small emphasis slots while retaining all original base movements.
 - Session feedback: finishing shows completed versus planned sets, recorded
   weighted-rep volume (timed holds excluded), and recovery/progression feedback.
-- Meal calculator: select foods and gram portions; USDA values determine
-  calories and macros. The server recalculates totals before saving. Manual
-  entry remains available for package labels and foods outside the library.
-- Pantry ideas: enter comma-separated ingredient names, exclude common
-  allergens, and optionally set a meal calorie/protein budget. Recipe portions
-  scale within limits; missing ingredients and budget gaps stay visible. Daily
-  targets guide default budgets. These are deterministic suggestions, not AI
-  or medical meal plans. Review the ingredients before logging food consumed.
+- Meal calculator: search over 8,000 source-backed foods by name/preparation,
+  browse categories, choose gram weights or source household measures, and
+  save calculated meals. Private label foods support brands and foods outside
+  the catalog. The server recalculates totals and stores ingredient/source
+  snapshots; deleting a personal food does not change existing meal history.
+- Pantry ideas: confirm ingredients and their preparation states, save a
+  personal pantry, choose any/vegetarian/vegan, exclude allergens/gluten, and
+  set calorie/protein budgets with optional carb/fat limits. Available-only
+  mode is the default. Extra staples, missing ingredients and infeasible
+  targets stay visible. Daily targets and meals remaining guide editable
+  default budgets; saved numeric overrides persist until cleared. These are bounded ingredient combinations, not AI,
+  traditional recipes, or medical meal plans. Log food actually consumed.
 - Community: member-only posts, topic categories, owner editing/deletion,
   comments, likes, pagination, and reports. Public display names are entered
   explicitly. No meals, weight, workouts, or photos are shared automatically.
@@ -131,18 +135,67 @@ These basic controls are not a replacement for active community moderation.
 
 ## Food Data And Archived Research
 
-`app/data/foods.json` contains 18 common-food records from the official
-[USDA FoodData Central SR Legacy April 2018 dataset](https://fdc.nal.usda.gov/download-datasets/).
-It records each FDC ID, original description, food preparation state, and
-calories/protein/carbs/fat per 100 grams. No API key or paid API is needed.
-Values are estimates; brands, added oil/sauces, cooking state, edible weights
-and allergen cross-contact matter. This is not a comprehensive food database.
+`app/data/food-catalog.json` contains **8,104 complete nutrient records** from
+the official [USDA downloads](https://fdc.nal.usda.gov/download-datasets/):
+SR Legacy April 2018 and Foundation April 2026. Each record preserves its FDC
+ID/link, original description, preparation state, calories/protein/carbs/fat
+per 100g and available source measures. Input SHA-256 hashes are included in
+dataset metadata. The importer excluded 84 incomplete/invalid records instead
+of treating missing nutrients as zero. No paid API or API key is required.
 
-To reproduce it, download and extract the SR Legacy JSON archive from USDA,
-then run `node scripts/import-food-library.mjs PATH_TO_EXTRACTED_JSON`.
-Edit that script's explicit selection to add verified records and rebuild.
-Recipe combinations and matching live in `app/lib/food-calculator.ts`;
-allergen tags are curated and do not guarantee an allergen-safe product.
+Coverage is international, not limited or ranked by a preferred cuisine:
+American and Mexican foods, Caribbean/West African staples, Asian ingredients,
+European/Mediterranean foods, plant-based proteins, and less-common grains,
+roots and produce are searchable where USDA has records. It is **not every
+food or every brand worldwide**. Garri, egusi, regional dishes, or brands without
+an appropriate source entry must use an actual label/reference entry or manual
+meal totals, not a guessed substitution for raw cassava or other similar foods.
+
+To reproduce the current catalog, download/extract the two exact JSON releases
+above and run:
+
+```bash
+node scripts/import-food-catalog.mjs PATH_TO_SR_LEGACY_JSON PATH_TO_FOUNDATION_JSON
+```
+
+`app/data/foods.json` and its old importer retain the original 18 featured IDs
+and aliases for compatibility; the new catalog is the active library. Review
+source-version names in the new importer before using a future USDA release.
+Search/indexing lives in `food-catalog.ts` and uses Fuse.js on the server, with
+at most 40 results per request. The full catalog is not a phone download.
+Fuzzy/ambiguous pantry text requires explicit confirmation; saved pantry IDs
+and personal foods are always resolved through the signed-in member's session.
+
+### Nutrition Accuracy And Limits
+
+- Weigh edible food in the listed raw/dry/cooked/drained state. Source household
+  measures apply only to that exact food; do not assume a universal gram weight
+  for a cup or tablespoon. Added oils/sauces and extra ingredients need logging.
+- USDA values and package labels are estimates, not laboratory results for the
+  member's meal. Label entries require all four macro values, serving grams,
+  source/reference, preparation and diet/allergen declarations. Per-serving
+  values are normalized to 100g; label calories are not replaced with a naive
+  4/4/9 calculation. See [FDA label guidance](https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label).
+- Allergen/diet tags inferred from generic descriptions are conservative hints,
+  not independently verified product ingredients. Uncertain mixed products are
+  excluded when applying allergen restrictions; unknown dietary classifications
+  are excluded from vegetarian/vegan ideas. Check brands and cross-contact.
+  Shellfish/gluten filtering is broader than the nine US major allergen labels.
+  See [FDA food allergy guidance](https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/food-allergies).
+- Condiments, raw flour, raw cassava and unsuitable mixed/preparation states
+  remain searchable for calculation but are not automatic meal bases. Ideas
+  count listed oils and stay within bounded serving sizes. Optimization is
+  limited to six candidate foods per role for predictable server work; it is
+  not an exhaustive recipe search or a proof that no possible meal can fit.
+- Calorie budget is a maximum and protein target a minimum; optional carb/fat
+  values are maxima. The UI reports over-budget/shortfall conditions instead of
+  promising a match. Running out of a daily budget never blocks meal logging.
+  General adult fitness estimates do not establish medical dietary adequacy,
+  micronutrient coverage, or suitability for children/pregnancy/medical needs.
+- Personal labels are private, capped at 200 per member, and pantries at 100
+  unique foods. Calculated meals allow 1-30 ingredients with positive gram
+  amounts up to 2,000g each. Manual editing replaces the ingredient snapshot
+  so its breakdown cannot contradict the edited totals.
 
 The Resources page and its homepage, footer, and dashboard links were removed
 at the owner's request on October 13, 2026. `/resources` is no longer an app
@@ -153,17 +206,20 @@ directly without a server and stores its selections in your browser only.
 
 ## Where To Change The New Features
 
-| Change | File |
-| --- | --- |
-| Muscle names and emphasis exercises | `app/lib/muscle-priority.ts` |
-| Intake options and dashboard handoff | `app/starter-pack/components/StarterPackForm.tsx`, `app/starter-pack/StarterPackIntake.tsx` |
-| Dashboard routine preferences | `app/dashboard/profile/RoutinePreferences.tsx`, `app/lib/actions/routine.ts` |
-| Session feedback | `app/lib/workout-feedback.ts`, `app/dashboard/workouts/page.tsx` |
-| Food data and imports | `app/data/foods.json`, `scripts/import-food-library.mjs` |
-| Meal calculation and pantry recipes | `app/lib/food-calculator.ts`, `app/dashboard/nutrition/FoodTools.tsx` |
-| Community feed and permissions | `app/dashboard/community/page.tsx`, `app/lib/actions/community.ts` |
-| New database tables/columns | `prisma/schema.prisma`, `prisma/bootstrap.sql` |
-| Archived resource shortlist (not published) | `RESOURCE_CHECKLIST.md`, `resource-checklist.html` |
+| Change                                                            | File                                                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Muscle names and emphasis exercises                               | `app/lib/muscle-priority.ts`                                                                |
+| Intake options and dashboard handoff                              | `app/starter-pack/components/StarterPackForm.tsx`, `app/starter-pack/StarterPackIntake.tsx` |
+| Dashboard routine preferences                                     | `app/dashboard/profile/RoutinePreferences.tsx`, `app/lib/actions/routine.ts`                |
+| Session feedback                                                  | `app/lib/workout-feedback.ts`, `app/dashboard/workouts/page.tsx`                            |
+| Food data, source versions, aliases and ingredient classification | `app/data/food-catalog.json`, `scripts/import-food-catalog.mjs`                             |
+| Search and pantry matching                                        | `app/lib/food-catalog.ts`, `app/dashboard/nutrition/FoodPicker.tsx`                         |
+| Portion calculations and meal-idea bounds                         | `app/lib/food-types.ts`, `app/lib/pantry-planner.ts`                                        |
+| Personal foods, pantry persistence and validation                 | `app/lib/actions/food-tools.ts`, `app/lib/owned-foods.ts`, `app/lib/food-input.ts`          |
+| Nutrition controls and saved ingredient breakdown                 | `app/dashboard/nutrition/FoodTools.tsx`, `LabelFoodForm.tsx`, `MealIngredients.tsx`         |
+| Community feed and permissions                                    | `app/dashboard/community/page.tsx`, `app/lib/actions/community.ts`                          |
+| New database tables/columns                                       | `prisma/schema.prisma`, `prisma/bootstrap.sql`                                              |
+| Archived resource shortlist (not published)                       | `RESOURCE_CHECKLIST.md`, `resource-checklist.html`                                          |
 
 ## How Adaptive Workouts Work
 
@@ -209,40 +265,40 @@ stays with the coach.
 
 ## Where To Change Things
 
-| What to change | File or folder | Notes |
-| --- | --- | --- |
-| Homepage hero, member promotions, membership CTAs | `app/page.tsx` | `membershipFeatures` defines the three member promotions. |
-| Main logo | `public/brand.png` | Used by the site, member hub, and authentication screens. Keep the filename or update references. |
-| Browser/app icon | `app/layout.tsx` | `metadata.icons` uses the Gorilla Mentality logo instead of the Next.js/Vercel starter icon. |
-| Member promotion screenshots | `public/member-tools/` | Regenerate with `node scripts/capture-member-previews.mjs` while the local app and database are running. The script creates and cleans up its own demo account. |
-| Global fonts, page background, text defaults | `app/globals.css`, `app/layout.tsx` | Geist is loaded by Next.js; charcoal/white and yellow accents are the brand palette. |
-| Header and footer | `app/components/layout/SiteHeader.tsx`, `SiteFooter.tsx` | Navigation content is in `app/data/site.ts`. |
-| Member navigation and logo | `app/dashboard/DashboardShell.tsx` | Links, active states, sign-out, and mobile navigation. |
-| Sign-in/sign-up colors, logo, dev notice appearance | `app/layout.tsx` | Clerk Core 3 uses `appearance.variables`, `appearance.options`, and `appearance.elements`. The notice flag only changes presentation, not which instance/key is used. |
-| Login/signup page copy | `app/login/page.tsx`, `app/signup/page.tsx` | `/sign-in` and `/sign-up` reuse these pages. |
-| Testimonials, social links, FAQ, starter benefits | `app/data/site.ts` | Image files are in `public/testimonials/`. |
-| Intake labels and choices | `app/data/starter-pack/options.ts` | `initialIntakeForm` deliberately contains no preselected choices. |
-| Intake layout and selection tiles | `app/starter-pack/components/StarterPackForm.tsx`, `OptionTile.tsx` | Update validation when adding new required fields. |
-| Intake submission/profile sync | `app/starter-pack/StarterPackIntake.tsx`, `app/api/profile/route.ts` | The API uses the authenticated user ID, not a submitted account ID. |
-| Exercise names, sets/reps, split and day order | `app/data/starter-pack/training.ts` | Keep exercise names stable when you want to keep the same historical exercise identity. |
-| Exercise parsing and routine key | `app/lib/workout-plan.ts` | Handles formats such as `4 sets x 6-10 reps` and `3 x 10-12`. |
-| Next-day scheduling, draft resume, saved sessions | `app/lib/actions/workouts.ts` | Authorization, database queries, and session transactions. |
-| Adaptive rep/load rules | `app/lib/workout-progression.ts` | Test changes against incomplete sets, light loads, timed holds, and repeat saves. |
-| Workout logger/history screens | `app/dashboard/workouts/` | Numeric entries remain actual performed work, separate from suggested targets. |
-| Nutrition targets and starter meal portions | `app/lib/starter-pack/plan-generator.ts` | Weight is normalized to pounds, including `kg` intake. |
-| Starter foods/meal examples | `app/data/starter-pack/nutrition.ts` | Separate from members' individually entered meals. |
-| Food diary screen and storage | `app/dashboard/nutrition/page.tsx`, `app/lib/actions/meals.ts` | Add/edit/delete entries by member and selected date. |
-| Macro totals | `app/lib/tracking-summary.ts` | Adds current meals and historical manual daily totals without deleting either. |
-| Weight entry/history | `app/dashboard/progress/WeightTracker.tsx`, `app/lib/actions/weight.ts` | Database weights are pounds; UI can display lb/kg. One entry per member/date. |
-| Progress photos | `app/dashboard/progress/page.tsx`, `app/api/progress/` | Image routes check ownership. Compression is in `prepare-photo.ts` and the upload route. |
-| Dashboard metrics and next steps | `app/dashboard/page.tsx`, `app/lib/actions/dashboard.ts` | Weekly boundaries use the browser's local timezone. |
-| Coaching inbox and form options | `app/data/coaching.ts`, `app/coaching/page.tsx` | Change `COACHING_EMAIL`; deliveries require FormSubmit activation. |
-| Feedback inbox and questions | `app/data/feedback.ts`, `app/feedback/page.tsx` | Change `FEEDBACK_EMAIL`; no test sends messages to the inbox. |
-| Data fields, relations, indexes | `prisma/schema.prisma` | Update `bootstrap.sql` together with schema additions. |
-| Deploy-time database setup | `prisma/bootstrap.sql`, `scripts/deploy-database.mjs` | Additive table creation in a transaction. It is not a general destructive migration tool. |
-| Validation and allowed numeric ranges | `app/lib/validation.ts` | Server-side validation must remain authoritative. |
-| Protected routes | `proxy.ts`, `app/dashboard/layout.tsx` | APIs return JSON 401 when signed out; dashboard pages redirect to login. Actions also check auth. |
-| PDF contents/colors/layout | `app/lib/starter-pack/pdf-export.ts` | See the PDF section below. |
+| What to change                                      | File or folder                                                          | Notes                                                                                                                                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage hero, member promotions, membership CTAs   | `app/page.tsx`                                                          | `membershipFeatures` defines the three member promotions.                                                                                                             |
+| Main logo                                           | `public/brand.png`                                                      | Used by the site, member hub, and authentication screens. Keep the filename or update references.                                                                     |
+| Browser/app icon                                    | `app/layout.tsx`                                                        | `metadata.icons` uses the Gorilla Mentality logo instead of the Next.js/Vercel starter icon.                                                                          |
+| Member promotion screenshots                        | `public/member-tools/`                                                  | Regenerate with `node scripts/capture-member-previews.mjs` while the local app and database are running. The script creates and cleans up its own demo account.       |
+| Global fonts, page background, text defaults        | `app/globals.css`, `app/layout.tsx`                                     | Geist is loaded by Next.js; charcoal/white and yellow accents are the brand palette.                                                                                  |
+| Header and footer                                   | `app/components/layout/SiteHeader.tsx`, `SiteFooter.tsx`                | Navigation content is in `app/data/site.ts`.                                                                                                                          |
+| Member navigation and logo                          | `app/dashboard/DashboardShell.tsx`                                      | Links, active states, sign-out, and mobile navigation.                                                                                                                |
+| Sign-in/sign-up colors, logo, dev notice appearance | `app/layout.tsx`                                                        | Clerk Core 3 uses `appearance.variables`, `appearance.options`, and `appearance.elements`. The notice flag only changes presentation, not which instance/key is used. |
+| Login/signup page copy                              | `app/login/page.tsx`, `app/signup/page.tsx`                             | `/sign-in` and `/sign-up` reuse these pages.                                                                                                                          |
+| Testimonials, social links, FAQ, starter benefits   | `app/data/site.ts`                                                      | Image files are in `public/testimonials/`.                                                                                                                            |
+| Intake labels and choices                           | `app/data/starter-pack/options.ts`                                      | `initialIntakeForm` deliberately contains no preselected choices.                                                                                                     |
+| Intake layout and selection tiles                   | `app/starter-pack/components/StarterPackForm.tsx`, `OptionTile.tsx`     | Update validation when adding new required fields.                                                                                                                    |
+| Intake submission/profile sync                      | `app/starter-pack/StarterPackIntake.tsx`, `app/api/profile/route.ts`    | The API uses the authenticated user ID, not a submitted account ID.                                                                                                   |
+| Exercise names, sets/reps, split and day order      | `app/data/starter-pack/training.ts`                                     | Keep exercise names stable when you want to keep the same historical exercise identity.                                                                               |
+| Exercise parsing and routine key                    | `app/lib/workout-plan.ts`                                               | Handles formats such as `4 sets x 6-10 reps` and `3 x 10-12`.                                                                                                         |
+| Next-day scheduling, draft resume, saved sessions   | `app/lib/actions/workouts.ts`                                           | Authorization, database queries, and session transactions.                                                                                                            |
+| Adaptive rep/load rules                             | `app/lib/workout-progression.ts`                                        | Test changes against incomplete sets, light loads, timed holds, and repeat saves.                                                                                     |
+| Workout logger/history screens                      | `app/dashboard/workouts/`                                               | Numeric entries remain actual performed work, separate from suggested targets.                                                                                        |
+| Nutrition targets and starter meal portions         | `app/lib/starter-pack/plan-generator.ts`                                | Weight is normalized to pounds, including `kg` intake.                                                                                                                |
+| Starter foods/meal examples                         | `app/data/starter-pack/nutrition.ts`                                    | Separate from members' individually entered meals.                                                                                                                    |
+| Food diary screen and storage                       | `app/dashboard/nutrition/page.tsx`, `app/lib/actions/meals.ts`          | Add/edit/delete entries by member and selected date.                                                                                                                  |
+| Macro totals                                        | `app/lib/tracking-summary.ts`                                           | Adds current meals and historical manual daily totals without deleting either.                                                                                        |
+| Weight entry/history                                | `app/dashboard/progress/WeightTracker.tsx`, `app/lib/actions/weight.ts` | Database weights are pounds; UI can display lb/kg. One entry per member/date.                                                                                         |
+| Progress photos                                     | `app/dashboard/progress/page.tsx`, `app/api/progress/`                  | Image routes check ownership. Compression is in `prepare-photo.ts` and the upload route.                                                                              |
+| Dashboard metrics and next steps                    | `app/dashboard/page.tsx`, `app/lib/actions/dashboard.ts`                | Weekly boundaries use the browser's local timezone.                                                                                                                   |
+| Coaching inbox and form options                     | `app/data/coaching.ts`, `app/coaching/page.tsx`                         | Change `COACHING_EMAIL`; deliveries require FormSubmit activation.                                                                                                    |
+| Feedback inbox and questions                        | `app/data/feedback.ts`, `app/feedback/page.tsx`                         | Change `FEEDBACK_EMAIL`; no test sends messages to the inbox.                                                                                                         |
+| Data fields, relations, indexes                     | `prisma/schema.prisma`                                                  | Update `bootstrap.sql` together with schema additions.                                                                                                                |
+| Deploy-time database setup                          | `prisma/bootstrap.sql`, `scripts/deploy-database.mjs`                   | Additive table creation in a transaction. It is not a general destructive migration tool.                                                                             |
+| Validation and allowed numeric ranges               | `app/lib/validation.ts`                                                 | Server-side validation must remain authoritative.                                                                                                                     |
+| Protected routes                                    | `proxy.ts`, `app/dashboard/layout.tsx`                                  | APIs return JSON 401 when signed out; dashboard pages redirect to login. Actions also check auth.                                                                     |
+| PDF contents/colors/layout                          | `app/lib/starter-pack/pdf-export.ts`                                    | See the PDF section below.                                                                                                                                            |
 
 ### Brand Changes
 
@@ -259,21 +315,23 @@ changing appearance does not promote a development instance to production.
 
 ## Data And Security Boundaries
 
-| Model | Purpose |
-| --- | --- |
-| `Profile` | Clerk user ID, intake, routine choices, calorie/protein targets. |
-| `Exercise` | Stable exercise identity used in routine and historical logs. |
-| `WorkoutTemplate` | Optional seeded catalog; live routines use the training data. |
-| `WorkoutLog` | Actual set weight, reps/duration, completion, and session date. |
-| `WorkoutSession` | Routine key, selected day, session date, draft/finished state, effort. |
-| `NutritionLog` | Historical manually entered daily calorie/protein totals. |
-| `MealEntry` | Individually entered meals and macros for a selected date. |
-| `WeightEntry` | Body weight normalized to lb, unique by member/date. |
-| `ProgressPhoto` | Private compressed JPEG payload and metadata. |
-| `CommunityPost` | Member-shared text, public display name, topic, and owner. |
-| `CommunityComment` | Member replies; deleted with the parent post. |
-| `CommunityLike` | One like per member/post. |
-| `CommunityReport` | Member reports visible only to configured moderators. |
+| Model                 | Purpose                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Profile`             | Clerk user ID, intake, routine choices, calorie/protein targets.                                                   |
+| `Exercise`            | Stable exercise identity used in routine and historical logs.                                                      |
+| `WorkoutTemplate`     | Optional seeded catalog; live routines use the training data.                                                      |
+| `WorkoutLog`          | Actual set weight, reps/duration, completion, and session date.                                                    |
+| `WorkoutSession`      | Routine key, selected day, session date, draft/finished state, effort.                                             |
+| `NutritionLog`        | Historical manually entered daily calorie/protein totals.                                                          |
+| `MealEntry`           | Meals and macros for a selected date; optional immutable ingredient/source snapshot.                               |
+| `CustomFood`          | Private member-entered label/reference food values normalized to 100g.                                             |
+| `MemberPantry`        | Member's confirmed food IDs and diet/allergen/preferences; not a weighed stock inventory.                          |
+| `WeightEntry`         | Body weight normalized to lb, unique by member/date.                                                               |
+| `ProgressPhoto`       | Private compressed JPEG payload and metadata.                                                                      |
+| `CommunityPost`       | Member-shared text, public display name, topic, and owner.                                                         |
+| `CommunityComment`    | Member replies; deleted with the parent post.                                                                      |
+| `CommunityLike`       | One like per member/post.                                                                                          |
+| `CommunityReport`     | Member reports visible only to configured moderators.                                                              |
 | `CoachingApplication` | Existing model reserved for a future database-backed application flow; current applications go through FormSubmit. |
 
 Server actions and API routes obtain the Clerk user ID from the session.
@@ -308,20 +366,20 @@ Preview environment scopes are separate; changes need a new deployment.
 
 ## Troubleshooting
 
-| Symptom | Check or action |
-| --- | --- |
-| Member sign-in unavailable | Verify the exact Clerk variable names and valid matching instance keys; restart locally or redeploy Vercel. |
-| Login UI loads but production rejects the origin | Configure the live domain in the production Clerk instance. |
-| Prisma P1001 | Replace placeholder hostnames, confirm the database is running/reachable, and check the connection string. |
-| Missing tracking tables | Run `npm run db:deploy`, then `npm run db:check`. |
-| Windows EPERM during Prisma generate | Stop the running Next.js process that has the Prisma engine loaded, then retry. |
-| Local PostgreSQL reports another server is running | Check `npm run db:check`; reuse the running local database instead of starting a second copy. |
-| Workout load does not increase | Check performed-set completion, full set count, repeated consistent loads, rep targets, and the increment cap. A single or unfinished exercise is not enough. |
-| Old nutrition total appears with new meals | Historical manual totals are intentionally retained. Delete that visible entry if it represents the same intake you re-entered as meals. |
-| Photo upload rejected | Use JPEG, PNG, or WebP under 20 MB before browser compression. The prepared upload is capped at 2 MB. |
-| Coaching/feedback email not arriving | Confirm recipient constants and activate FormSubmit from the recipient inbox. |
-| Test signups fail on verification | Use development Clerk testing tokens; `+clerk_test@example.com` addresses use the test verification code. Never test with production member records. |
-| Screenshots no longer match the app | Restart the built app and rerun `scripts/capture-member-previews.mjs`. |
+| Symptom                                            | Check or action                                                                                                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member sign-in unavailable                         | Verify the exact Clerk variable names and valid matching instance keys; restart locally or redeploy Vercel.                                                   |
+| Login UI loads but production rejects the origin   | Configure the live domain in the production Clerk instance.                                                                                                   |
+| Prisma P1001                                       | Replace placeholder hostnames, confirm the database is running/reachable, and check the connection string.                                                    |
+| Missing tracking tables                            | Run `npm run db:deploy`, then `npm run db:check`.                                                                                                             |
+| Windows EPERM during Prisma generate               | Stop the running Next.js process that has the Prisma engine loaded, then retry.                                                                               |
+| Local PostgreSQL reports another server is running | Check `npm run db:check`; reuse the running local database instead of starting a second copy.                                                                 |
+| Workout load does not increase                     | Check performed-set completion, full set count, repeated consistent loads, rep targets, and the increment cap. A single or unfinished exercise is not enough. |
+| Old nutrition total appears with new meals         | Historical manual totals are intentionally retained. Delete that visible entry if it represents the same intake you re-entered as meals.                      |
+| Photo upload rejected                              | Use JPEG, PNG, or WebP under 20 MB before browser compression. The prepared upload is capped at 2 MB.                                                         |
+| Coaching/feedback email not arriving               | Confirm recipient constants and activate FormSubmit from the recipient inbox.                                                                                 |
+| Test signups fail on verification                  | Use development Clerk testing tokens; `+clerk_test@example.com` addresses use the test verification code. Never test with production member records.          |
+| Screenshots no longer match the app                | Restart the built app and rerun `scripts/capture-member-previews.mjs`.                                                                                        |
 
 ## Project Structure
 
@@ -341,19 +399,20 @@ Preview environment scopes are separate; changes need a new deployment.
 Use a current Node.js 22 or 24 LTS release and npm. `package-lock.json` pins the
 installed dependency graph; use `npm ci` for a reproducible installation.
 
-| Dependency | Role |
-| --- | --- |
-| Next.js 16 / React 19 / TypeScript | App Router pages, server actions, API routes, and typed UI. |
-| Tailwind CSS 4 / lucide-react | Utility styling and interface icons. |
-| Clerk Next.js SDK | Signup, email verification, sessions, profile settings, and sign-out. |
-| Prisma 5 / PostgreSQL | Persistent member profiles, sets, sessions, meals, weights, and photos. |
-| Zod | Server-side validation of member input. |
-| pdf-lib | Browser-generated starter-plan PDF files. |
-| sharp | Server-side image validation, resizing, and JPEG compression. |
-| framer-motion | Existing transitions and testimonial interactions. |
-| Vitest | Unit and server-action regression tests. |
-| Playwright / Clerk testing helpers | Real browser workflows with disposable development users. |
-| embedded-postgres / dotenv | Local development database and configuration loading. Not an in-app member service. |
+| Dependency                         | Role                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------- |
+| Next.js 16 / React 19 / TypeScript | App Router pages, server actions, API routes, and typed UI.                           |
+| Tailwind CSS 4 / lucide-react      | Utility styling and interface icons.                                                  |
+| Clerk Next.js SDK                  | Signup, email verification, sessions, profile settings, and sign-out.                 |
+| Prisma 5 / PostgreSQL              | Persistent member profiles, sets, sessions, meals, weights, and photos.               |
+| Zod                                | Server-side validation of member input.                                               |
+| Fuse.js                            | Server-side food search; fuzzy matches never silently replace confirmed pantry foods. |
+| pdf-lib                            | Browser-generated starter-plan PDF files.                                             |
+| sharp                              | Server-side image validation, resizing, and JPEG compression.                         |
+| framer-motion                      | Existing transitions and testimonial interactions.                                    |
+| Vitest                             | Unit and server-action regression tests.                                              |
+| Playwright / Clerk testing helpers | Real browser workflows with disposable development users.                             |
+| embedded-postgres / dotenv         | Local development database and configuration loading. Not an in-app member service.   |
 
 There is no AI API key, Supabase client, Stripe checkout, or subscription gate
 required by this version. External services used at runtime are Clerk,
@@ -466,16 +525,16 @@ npm run lint
 npm run build
 ```
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Next.js with hot reload, usually port 3000. Requires the configured database to be running for member tools. |
-| `npm run build` | Generate Prisma client, apply additive database setup, and build the production app. |
-| `npm run start` | Serve the existing production build. Rebuild after code changes. |
-| `npm run lint` | ESLint checks. |
-| `npm test` | Unit and server-action regression tests. |
-| `npm run test:e2e` | Public and real development-member browser workflows on desktop/mobile. Requires the app at localhost:3000. |
-| `npm run db:local` | Start persistent local PostgreSQL; leave it running in a separate terminal. |
-| `npm run db:deploy` | Create/add the required tables and indexes; never deletes existing records. |
-| `npm run db:check` | Read-only database/schema health check using `.env.local`. |
-| `npm run prisma:seed` | Optional, non-destructive workout-template catalog seeding. |
-| `node scripts/capture-member-previews.mjs` | Refresh the homepage's real app screenshots with a disposable local demo account. |
+| Command                                    | Purpose                                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                              | Next.js with hot reload, usually port 3000. Requires the configured database to be running for member tools. |
+| `npm run build`                            | Generate Prisma client, apply additive database setup, and build the production app.                         |
+| `npm run start`                            | Serve the existing production build. Rebuild after code changes.                                             |
+| `npm run lint`                             | ESLint checks.                                                                                               |
+| `npm test`                                 | Unit and server-action regression tests.                                                                     |
+| `npm run test:e2e`                         | Public and real development-member browser workflows on desktop/mobile. Requires the app at localhost:3000.  |
+| `npm run db:local`                         | Start persistent local PostgreSQL; leave it running in a separate terminal.                                  |
+| `npm run db:deploy`                        | Create/add the required tables and indexes; never deletes existing records.                                  |
+| `npm run db:check`                         | Read-only database/schema health check using `.env.local`.                                                   |
+| `npm run prisma:seed`                      | Optional, non-destructive workout-template catalog seeding.                                                  |
+| `node scripts/capture-member-previews.mjs` | Refresh the homepage's real app screenshots with a disposable local demo account.                            |

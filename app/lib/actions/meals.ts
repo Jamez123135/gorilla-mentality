@@ -4,7 +4,9 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/app/lib/prisma";
 import { mealInput, nutritionInput } from "@/app/lib/validation";
 import { z } from "zod";
-import { calculateFood, foods } from "@/app/lib/food-calculator";
+import { sumFood } from "@/app/lib/food-types";
+import { resolveOwnedFoods } from "@/app/lib/owned-foods";
+import { Prisma } from "@prisma/client";
 
 export async function saveCalculatedMeal(input: unknown) {
   const { userId } = await auth();
@@ -22,17 +24,21 @@ export async function saveCalculatedMeal(input: unknown) {
           }),
         )
         .min(1)
-        .max(20),
+        .max(30),
     })
     .parse(input);
-  const totals = calculateFood(data.portions);
+  const foods = await resolveOwnedFoods(
+    userId,
+    data.portions.map((item) => item.foodId),
+  );
+  const totals = sumFood(data.portions, foods);
   const portion = data.portions
     .map(
       (item) =>
         `${item.grams}g ${foods.find((food) => food.id === item.foodId)!.name}`,
     )
     .join(", ");
-  return saveMeal({
+  const values = mealInput.parse({
     date: data.date,
     name: data.name,
     mealType: data.mealType,
@@ -42,6 +48,24 @@ export async function saveCalculatedMeal(input: unknown) {
         : portion,
     ...totals,
   });
+  const { date, ...meal } = values;
+  await prisma.profile.upsert({
+    where: { id: userId },
+    create: { id: userId },
+    update: {},
+  });
+  await prisma.mealEntry.create({
+    data: {
+      ...meal,
+      userId,
+      logDate: new Date(`${date}T00:00:00.000Z`),
+      ingredients: data.portions.map((item) => ({
+        grams: item.grams,
+        food: foods.find((food) => food.id === item.foodId)!,
+      })),
+    },
+  });
+  return { saved: true };
 }
 
 export async function getNutritionDiary(date: string) {
@@ -70,7 +94,7 @@ export async function saveMeal(input: unknown) {
   if (id) {
     const result = await prisma.mealEntry.updateMany({
       where: { id, userId, logDate },
-      data: values,
+      data: { ...values, ingredients: Prisma.DbNull },
     });
     if (!result.count) throw new Error("Meal not found");
   } else {

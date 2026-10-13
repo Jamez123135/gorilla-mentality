@@ -15,6 +15,8 @@ Promise.all([
   prisma.communityComment.findFirst(),
   prisma.communityLike.findFirst(),
   prisma.communityReport.findFirst(),
+  prisma.customFood.findFirst(),
+  prisma.memberPantry.findFirst(),
 ])
   .then(() => {
     console.log(
