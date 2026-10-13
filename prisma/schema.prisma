@@ -240,22 +240,24 @@ model CommunityReport {
 }
 
 model CustomFood {
-  id            String   @id @default(uuid())
-  userId        String
-  createdAt     DateTime @default(now())
-  name          String
-  brand         String?
-  preparation   String
-  role          String
-  diet          String
-  calories      Float
-  protein       Float
-  carbs         Float
-  fat           Float
-  allergens     String[]
-  labelReviewed Boolean  @default(false)
-  reference     String
-  profile       Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  userId         String
+  createdAt      DateTime @default(now())
+  name           String
+  brand          String?
+  preparation    String
+  role           String
+  diet           String
+  calories       Float
+  protein        Float
+  carbs          Float
+  fat            Float
+  allergens      String[]
+  labelReviewed  Boolean  @default(false)
+  reference      String
+  servingGrams   Float?
+  referenceBasis String   @default("serving")
+  profile        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("custom_foods")

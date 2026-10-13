@@ -90,11 +90,26 @@ describe("private nutrition tools", () => {
       protein: 2,
       carbs: 86,
       fat: 1,
+      servingGrams: 50,
+      referenceBasis: "serving",
     });
     mocks.customFood.count.mockResolvedValue(200);
     await expect(saveLabelFood({ ...row, servingGrams: 100 })).rejects.toThrow(
       /full/,
     );
+  });
+  it("retains per-100g label references and rejects mismatched reference weights", async () => {
+    const food = await saveLabelFood({
+      ...row,
+      servingGrams: 100,
+      referenceBasis: "100g",
+    });
+    expect(food.portions).toEqual([
+      { label: "100g label reference", grams: 100 },
+    ]);
+    await expect(
+      saveLabelFood({ ...row, servingGrams: 50, referenceBasis: "100g" }),
+    ).rejects.toThrow(/Check/);
   });
   it("scopes custom-food reads and rejects unavailable or another member's IDs", async () => {
     await expect(resolveOwnedFoods("owner", [`custom:${id}`])).rejects.toThrow(

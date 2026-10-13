@@ -27,7 +27,20 @@ export function labelFood(row: CustomFood): FoodSummary {
           : null,
     vegan: row.diet === "vegan" ? true : row.diet === "unknown" ? null : false,
     role: row.role as FoodRole,
-    portions: [],
+    portions:
+      row.servingGrams && row.servingGrams > 0
+        ? [
+            {
+              label:
+                row.referenceBasis === "100g"
+                  ? "100g label reference"
+                  : row.referenceBasis === "custom"
+                    ? "Label reference portion"
+                    : "1 label serving",
+              grams: row.servingGrams,
+            },
+          ]
+        : [],
     recipeEligible:
       row.role !== "other" && row.preparation !== "raw / uncooked",
   };

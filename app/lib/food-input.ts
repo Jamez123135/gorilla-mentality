@@ -27,6 +27,7 @@ export const labelFoodInput = z
     brand: z.string().trim().max(80).default(""),
     reference: z.string().trim().min(3).max(240),
     servingGrams: z.number().positive().max(2000),
+    referenceBasis: z.enum(["serving", "100g", "custom"]).default("serving"),
     calories: z.number().min(0).max(10000),
     protein: z.number().min(0).max(1000),
     carbs: z.number().min(0).max(1000),
@@ -47,6 +48,11 @@ export const labelFoodInput = z
   })
   .superRefine((data, context) => {
     const factor = 100 / data.servingGrams;
+    if (data.referenceBasis === "100g" && data.servingGrams !== 100)
+      context.addIssue({
+        code: "custom",
+        message: "Per-100g label values require a 100g reference weight.",
+      });
     if (
       data.calories * factor > 1200 ||
       [data.protein, data.carbs, data.fat].some(

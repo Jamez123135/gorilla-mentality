@@ -57,7 +57,9 @@ export default function FoodTools({
   >(null);
   const [finding, setFinding] = useState(false);
   const [reload, setReload] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const [actionBusy, setBusy] = useState(false);
+  const [labelSaving, setLabelSaving] = useState(false);
+  const busy = actionBusy || labelSaving;
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -187,7 +189,15 @@ export default function FoodTools({
     setRecords((current) => [
       ...new Map([...current, food].map((food) => [food.id, food])).values(),
     ]);
-    setPortions((current) => [...current, { foodId: food.id, grams: 100 }]);
+    setPortions((current) => [
+      ...current,
+      {
+        foodId: food.id,
+        grams: food.id.startsWith("custom:")
+          ? (food.portions[0]?.grams ?? 100)
+          : 100,
+      },
+    ]);
   }
   function addPantry(food: FoodSummary) {
     setPantry((current) => [
@@ -244,6 +254,7 @@ export default function FoodTools({
           <button
             key={value}
             role="tab"
+            disabled={busy}
             aria-selected={mode === value}
             onClick={() => {
               setMode(value);
@@ -278,6 +289,7 @@ export default function FoodTools({
       )}
       {showLabel && (
         <LabelFoodForm
+          onBusyChange={setLabelSaving}
           onClose={() => setShowLabel(false)}
           onSaved={(food) => {
             setState((current) =>
@@ -289,7 +301,10 @@ export default function FoodTools({
                 : current,
             );
             if (mode === "pantry") addPantry(food);
-            else addFood(food);
+            else {
+              addFood(food);
+              setName((current) => current || food.name.slice(0, 160));
+            }
             setMessage("Personal label food saved.");
           }}
         />

@@ -108,6 +108,12 @@ separately from the browser suite.
   save calculated meals. Private label foods support brands and foods outside
   the catalog. The server recalculates totals and stores ingredient/source
   snapshots; deleting a personal food does not change existing meal history.
+- Free label scanning: enter a food name, take/upload a nutrition-label photo,
+  crop/rotate it, and review the extracted calorie/protein/carb/fat values.
+  Reading runs on the member's device, not a paid AI/API service. Confirm the
+  label column and reference weight before saving. New label reference portions
+  are retained for later use; saving adds that portion to the calculator and
+  fills an empty meal name. Meal logging still requires a separate save.
 - Pantry ideas: confirm ingredients and their preparation states, save a
   personal pantry, choose any/vegetarian/vegan, exclude allergens/gluten, and
   set calorie/protein budgets with optional carb/fat limits. Available-only
@@ -203,6 +209,114 @@ route. This does not remove food calculation, pantry ideas, or member tracking.
 `RESOURCE_CHECKLIST.md` and `resource-checklist.html` remain repository-only
 research archives; they are not part of the published app. The HTML file opens
 directly without a server and stores its selections in your browser only.
+
+## Free Nutrition Label Scanning
+
+### Member Workflow
+
+1. Open Dashboard > Nutrition > Add label food and enter the item name.
+2. Choose Take photo or Upload photo. Camera capture uses the device's native
+   picker; camera availability and its output format depend on the device.
+3. Select the nutrition panel with the crop handles, rotate if needed, choose
+   the label language, and press Read label. Progress and Cancel scan remain
+   available while reading.
+4. Review the selected photo, recognized text, detected values, and warnings.
+   If there are multiple columns, explicitly choose a column and whether its
+   values are for one serving, 100g, or another gram reference portion.
+5. Use detected values to fill the editable fields. Missing/approximate readings
+   remain blank, not zero. Enter a gram reference weight if it was not readable;
+   a 100g basis always requires exactly 100g. Correct any reading errors.
+6. Check the macro/reference review box, independently review dietary/allergen
+   declarations, and save. The library stores normalized per-100g values plus
+   the original reference weight/basis. The calculator starts with that portion;
+   adjust to the amount actually consumed and save the meal.
+
+All of this is free for members. There is **no OCR subscription, paid vision API,
+API key, scan credit system, or membership upgrade**. Hosting/auth/database
+service costs remain the owner's infrastructure responsibility, as before.
+
+### Privacy And Limits
+
+- Photos are decoded, cropped and read in browser memory. They are not sent to
+  the application server or a third-party OCR service, and are not retained in
+  the food library. Only the confirmed numeric values and food/reference text
+  go through the authenticated save action. Temporary image URLs are revoked.
+- The first scan downloads self-hosted reader/model files. IndexedDB caches
+  language models only, not label photos. Offline scanning can fail if the
+  necessary reader assets are not available; manual entry remains usable when
+  the app itself is available, and saving still needs a network connection.
+- Inputs: JPEG, PNG or WebP, non-empty and at most 20 MB / 40 megapixels. HEIC,
+  PDFs, GIFs, unreadable files and oversized images are rejected. PNG/WebP are
+  read as a still image, not an animation. Headers are checked before decoding;
+  images are resized and normalized losslessly before recognition.
+- Languages: English, French/English and Spanish/English. Other scripts,
+  handwriting, reflective/curved/blurry labels and unusual layouts are not
+  guaranteed. Recognition confidence is an OCR diagnostic, not a probability
+  that the nutrition numbers are correct. Below 50, automatic filling is disabled.
+- Reading is capped at 90 seconds. Cancellation, errors, timeout, completion
+  and leaving the form terminate the worker. Retaking or changing a photo/crop
+  clears old proposals; changing reference/macros resets the review confirmation.
+- The parser reads total protein/carbohydrate/fat, not saturated fat, sugars,
+  net carbs, sodium, milligrams or daily-value percentages. It uses printed
+  calories/kcal, not kilojoules or guessed 4/4/9 energy. `<1g` and other
+  approximate amounts require a reviewed manual estimate. Milliliters/ounces
+  are not assumed to equal a gram serving; do not infer density from a photo.
+- Multi-column/as-prepared labels need explicit column and basis confirmation.
+  A value absent from the selected column stays blank rather than borrowing
+  another column's number. Conflicting portion weights are not silently chosen.
+  OCR never verifies ingredient/allergen safety or automatically checks the
+  allergen-review declaration. Label values are still estimates.
+
+Serving/column distinctions follow the
+[FDA label guidance](https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label).
+The review workflow, conservative parser and confidence cutoff are app-specific
+implementation choices, not FDA certification or a guarantee of exact reading.
+
+### Implementation And Assets
+
+The proven [Tesseract.js](https://github.com/naptha/tesseract.js) OCR engine is
+pinned to 7.0.0. `react-image-crop` provides touch/keyboard crop selection.
+`scripts/prepare-ocr-assets.mjs` copies the pinned worker, WebAssembly core
+variants, English/French/Spanish `4.0.0_best_int` language data, license notices
+and a file/hash manifest into ignored `public/ocr/v7/`. No build-time CDN
+download is necessary beyond installing the lockfile's npm packages.
+
+`npm run dev` and `npm run build` prepare these assets automatically. Run
+`npm run ocr:assets` independently after `npm ci` when using another preview
+setup. Install development dependencies before building: the model packages
+are build inputs. The generated assets must be included in the deployed Next.js
+public directory; do not delete them from an existing deployment. They are
+ignored by Git/ESLint and regenerated reproducibly, not manually edited.
+
+`app/lib/label-reader.ts` owns a native worker using the **pinned v7 worker
+protocol**, allowing termination even while initialization/model loading is
+pending. It does not reimplement the OCR engine. When upgrading Tesseract,
+review its worker protocol/core paths, update the asset version and adapter
+together, and rerun real image tests across desktop/mobile. Do not replace this
+with an unreviewed cloud upload or a paid service without an explicit decision.
+
+Key files:
+
+| Change                                                            | File                                                                                                                               |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Camera/upload, cropping, rotation, language, read/review controls | `app/dashboard/nutrition/LabelScanner.tsx`                                                                                         |
+| Label fields, validation, review confirmation, reference defaults | `app/dashboard/nutrition/LabelFoodForm.tsx`                                                                                        |
+| OCR worker lifecycle and model paths                              | `app/lib/label-reader.ts`                                                                                                          |
+| Browser image limits, normalization, crop/rotation                | `app/lib/label-image.ts`                                                                                                           |
+| Nutrient names, units, columns and ambiguity parsing              | `app/lib/nutrition-label.ts`                                                                                                       |
+| Self-hosted OCR asset preparation                                 | `scripts/prepare-ocr-assets.mjs`                                                                                                   |
+| Reference portion normalization/storage                           | `app/lib/actions/food-tools.ts`, `app/lib/food-input.ts`, `app/lib/owned-foods.ts`, `prisma/schema.prisma`, `prisma/bootstrap.sql` |
+| Synthetic OCR fixture images                                      | `scripts/create-label-test-fixtures.mjs`, `e2e/fixtures/`                                                                          |
+| Parser/worker regression tests                                    | `tests/nutrition-label.test.ts`, `tests/label-reader.test.ts`                                                                      |
+| Real scanner/member/browser tests                                 | `e2e/label-scanner.spec.ts`                                                                                                        |
+
+The checked-in fixture images are synthetic test data, not a marketed product
+or a real member label. Regenerate them with
+`node scripts/create-label-test-fixtures.mjs` after intentionally changing the
+test layout. Tests cover real OCR and label/meal persistence, blank images,
+unsupported files, cancellation, and manual recovery with disposable local
+users. Physical camera hardware and every real-world label cannot be certified
+by automated tests.
 
 ## Where To Change The New Features
 
@@ -324,7 +438,7 @@ changing appearance does not promote a development instance to production.
 | `WorkoutSession`      | Routine key, selected day, session date, draft/finished state, effort.                                             |
 | `NutritionLog`        | Historical manually entered daily calorie/protein totals.                                                          |
 | `MealEntry`           | Meals and macros for a selected date; optional immutable ingredient/source snapshot.                               |
-| `CustomFood`          | Private member-entered label/reference food values normalized to 100g.                                             |
+| `CustomFood`          | Private label/reference values normalized to 100g, with optional reference weight and basis.                       |
 | `MemberPantry`        | Member's confirmed food IDs and diet/allergen/preferences; not a weighed stock inventory.                          |
 | `WeightEntry`         | Body weight normalized to lb, unique by member/date.                                                               |
 | `ProgressPhoto`       | Private compressed JPEG payload and metadata.                                                                      |
@@ -407,6 +521,10 @@ installed dependency graph; use `npm ci` for a reproducible installation.
 | Prisma 5 / PostgreSQL              | Persistent member profiles, sets, sessions, meals, weights, and photos.               |
 | Zod                                | Server-side validation of member input.                                               |
 | Fuse.js                            | Server-side food search; fuzzy matches never silently replace confirmed pantry foods. |
+| Tesseract.js / tesseract.js-core   | Free on-device OCR worker and WebAssembly engine, self-hosted at build time.          |
+| @tesseract.js-data/eng/fra/spa     | Build inputs for the self-hosted language models; not a third-party recognition API.  |
+| react-image-crop                   | Touch and keyboard-accessible nutrition-label crop selection.                         |
+| image-size                         | Client-side header checks that reject oversized/unsupported images before decoding.   |
 | pdf-lib                            | Browser-generated starter-plan PDF files.                                             |
 | sharp                              | Server-side image validation, resizing, and JPEG compression.                         |
 | framer-motion                      | Existing transitions and testimonial interactions.                                    |
@@ -529,6 +647,7 @@ npm run build
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `npm run dev`                              | Next.js with hot reload, usually port 3000. Requires the configured database to be running for member tools. |
 | `npm run build`                            | Generate Prisma client, apply additive database setup, and build the production app.                         |
+| `npm run ocr:assets`                       | Prepare self-hosted OCR worker, core and model files from installed packages.                                |
 | `npm run start`                            | Serve the existing production build. Rebuild after code changes.                                             |
 | `npm run lint`                             | ESLint checks.                                                                                               |
 | `npm test`                                 | Unit and server-action regression tests.                                                                     |

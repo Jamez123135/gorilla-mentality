@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS "custom_foods" (
   "allergens" TEXT[] NOT NULL, "labelReviewed" BOOLEAN NOT NULL DEFAULT false, "reference" TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "custom_foods_userId_idx" ON "custom_foods"("userId");
+ALTER TABLE "custom_foods" ADD COLUMN IF NOT EXISTS "servingGrams" DOUBLE PRECISION;
+ALTER TABLE "custom_foods" ADD COLUMN IF NOT EXISTS "referenceBasis" TEXT NOT NULL DEFAULT 'serving';
 CREATE TABLE IF NOT EXISTS "member_pantries" (
   "userId" TEXT PRIMARY KEY REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   "updatedAt" TIMESTAMP(3) NOT NULL, "foodIds" TEXT[] NOT NULL, "preferences" JSONB NOT NULL

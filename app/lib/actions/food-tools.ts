@@ -100,6 +100,7 @@ export async function saveLabelFood(input: unknown) {
       await tx.customFood.create({
         data: {
           ...data,
+          servingGrams,
           userId,
           calories: data.calories * factor,
           protein: data.protein * factor,
