@@ -9,25 +9,6 @@ import { musclePriorities } from "@/app/lib/muscle-priority";
 import { createStarterPlan } from "@/app/lib/starter-pack/plan-generator";
 import { workoutSessions, routineKey } from "@/app/lib/workout-plan";
 import { workoutFeedback } from "@/app/lib/workout-feedback";
-import { resources } from "@/app/data/resources";
-
-describe("approved free resource library", () => {
-  it("publishes exactly the eight resources selected by the owner", () => {
-    expect(resources.map((resource) => resource.id)).toEqual([
-      "R02",
-      "R03",
-      "R05",
-      "R06",
-      "R07",
-      "R09",
-      "R10",
-      "R12",
-    ]);
-    expect(
-      resources.every((resource) => resource.url.startsWith("https://")),
-    ).toBe(true);
-  });
-});
 
 describe("verified food calculator", () => {
   it("uses USDA data scaled to gram portions", () => {

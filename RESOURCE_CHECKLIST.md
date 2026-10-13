@@ -1,8 +1,9 @@
 # Free Transformation Resources: Owner Review
 
-Researched October 12, 2026. Owner approved R02, R03, R05, R06, R07, R09, R10,
-and R12; those eight are now published at `/resources`. Other items remain
-proposals. Tick additional resources you approve, or reply with their IDs.
+Archived research from October 12, 2026. The owner previously approved R02,
+R03, R05, R06, R07, R09, R10, and R12. The Resources section was removed from
+the app at the owner's request on October 13, 2026. Nothing here is currently
+published as an app resource library; retained checkmarks record past choices.
 All linked resources below are publicly accessible without a required paid
 subscription. Equipment, groceries, internet access, and individual clinical
 care can still have costs. Free tools cannot guarantee a transformation.

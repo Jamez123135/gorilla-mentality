@@ -80,14 +80,6 @@ export default function HomePage() {
                 Get a starter plan
               </Link>
             </div>
-            <p className="mt-4 text-sm">
-              <Link
-                href="/resources"
-                className="font-semibold text-yellow-500 underline underline-offset-4"
-              >
-                Free training, food and recovery resources
-              </Link>
-            </p>
             <p className="mt-4 flex items-center gap-2 text-xs text-zinc-300">
               <Check className="h-4 w-4 text-yellow-500" />
               Free tracking tools. No membership payment.

@@ -14,7 +14,6 @@ import {
   Home,
   MessageSquare,
   Users,
-  Library,
 } from "lucide-react";
 
 const links = [
@@ -23,7 +22,6 @@ const links = [
   { href: "/dashboard/nutrition", label: "Nutrition", icon: Utensils },
   { href: "/dashboard/progress", label: "Progress", icon: TrendingUp },
   { href: "/dashboard/community", label: "Community", icon: Users },
-  { href: "/resources", label: "Resources", icon: Library },
   { href: "/dashboard/profile", label: "Profile", icon: User },
   { href: "/coaching", label: "1:1 Coaching", icon: MessageSquare },
 ];

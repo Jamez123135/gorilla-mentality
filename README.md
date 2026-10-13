@@ -129,7 +129,7 @@ identities or proof of professional credentials. Posting is limited to three
 posts and ten comments per member per minute using database transactions.
 These basic controls are not a replacement for active community moderation.
 
-## Food Data And Resource Approval
+## Food Data And Archived Research
 
 `app/data/foods.json` contains 18 common-food records from the official
 [USDA FoodData Central SR Legacy April 2018 dataset](https://fdc.nal.usda.gov/download-datasets/).
@@ -144,17 +144,12 @@ Edit that script's explicit selection to add verified records and rebuild.
 Recipe combinations and matching live in `app/lib/food-calculator.ts`;
 allergen tags are curated and do not guarantee an allergen-safe product.
 
-The researched resource shortlist is in `RESOURCE_CHECKLIST.md` and the
-clickable `resource-checklist.html` file at the repository root. Open the HTML
-file directly; no server is required. Tick choices and share their R01-R13
-IDs in the conversation. Selections are saved in your browser only, not sent
-to the assistant or production database. The proposed external resource
-library publishes the owner-approved **R02, R03, R05, R06, R07, R09, R10,
-and R12** at `/resources`. R01, R04, R08, R11, and R13 are not published.
-Edit `app/data/resources.ts` to maintain links, descriptions and review date;
-`app/resources/page.tsx` owns the layout. Link to original
-resources instead of copying copyrighted pages or videos. The research
-covers training, nutrition, budget meals, food safety, recovery and habits.
+The Resources page and its homepage, footer, and dashboard links were removed
+at the owner's request on October 13, 2026. `/resources` is no longer an app
+route. This does not remove food calculation, pantry ideas, or member tracking.
+`RESOURCE_CHECKLIST.md` and `resource-checklist.html` remain repository-only
+research archives; they are not part of the published app. The HTML file opens
+directly without a server and stores its selections in your browser only.
 
 ## Where To Change The New Features
 
@@ -168,7 +163,7 @@ covers training, nutrition, budget meals, food safety, recovery and habits.
 | Meal calculation and pantry recipes | `app/lib/food-calculator.ts`, `app/dashboard/nutrition/FoodTools.tsx` |
 | Community feed and permissions | `app/dashboard/community/page.tsx`, `app/lib/actions/community.ts` |
 | New database tables/columns | `prisma/schema.prisma`, `prisma/bootstrap.sql` |
-| Resource shortlist | `RESOURCE_CHECKLIST.md`, `resource-checklist.html` |
+| Archived resource shortlist (not published) | `RESOURCE_CHECKLIST.md`, `resource-checklist.html` |
 
 ## How Adaptive Workouts Work
 

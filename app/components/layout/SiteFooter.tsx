@@ -45,9 +45,6 @@ export function SiteFooter() {
             <Link href="/dashboard" className="text-zinc-400 hover:text-white">
               Member Area
             </Link>
-            <Link href="/resources" className="text-zinc-400 hover:text-white">
-              Free Resources
-            </Link>
           </div>
         </div>
       </div>

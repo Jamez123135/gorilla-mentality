@@ -158,6 +158,11 @@ test.describe("transformation tools", () => {
     });
 
     await page.goto("/dashboard/community");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Dashboard" })
+        .getByRole("link", { name: "Resources", exact: true }),
+    ).toHaveCount(0);
     const display = `Member-${info.project.name}`;
     const body = `Progress-${info.project.name}`;
     await page.getByLabel("Public display name").fill(display);

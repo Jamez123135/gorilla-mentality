@@ -15,13 +15,13 @@ test("public routes render and fit the viewport", async ({
     "/starter-pack",
     "/coaching",
     "/feedback",
-    "/resources",
     "/login",
     "/signup",
   ]) {
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBe(200);
     await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator('a[href="/resources"]')).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -37,22 +37,15 @@ test("public routes render and fit the viewport", async ({
   expect(errors).toEqual([]);
 });
 
-test("publishes only approved free resources and keeps the hero framed", async ({
+test("removes the resources route and keeps the hero framed", async ({
   page,
 }, testInfo) => {
-  await page.goto("/resources", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { name: "Free Resources", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator('main section a[target="_blank"]')).toHaveCount(8);
-  await expect(
-    page.getByText("NIDDK Body Weight Planner", { exact: false }),
-  ).toHaveCount(0);
-  await page.screenshot({
-    path: testInfo.outputPath("resources.png"),
-    fullPage: true,
+  const response = await page.goto("/resources", {
+    waitUntil: "domcontentloaded",
   });
+  expect(response?.status()).toBe(404);
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('a[href="/resources"]')).toHaveCount(0);
   await page
     .locator("main section img")
     .first()
