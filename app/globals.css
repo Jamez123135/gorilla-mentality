@@ -25,3 +25,36 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   letter-spacing: 0;
 }
+
+[data-member-shell] :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 3px;
+}
+
+[data-member-shell] button {
+  touch-action: manipulation;
+}
+
+[data-member-shell] .member-skip-link:not(:focus) {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  [data-member-shell] :is(input, select, textarea) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-member-shell] *, [data-member-shell] *::before, [data-member-shell] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

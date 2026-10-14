@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import { Save, Trash2, ChefHat, Plus, RefreshCw } from "lucide-react";
 import {
   sumFood,
@@ -13,9 +14,11 @@ import {
   savePantry,
   deleteLabelFood,
 } from "@/app/lib/actions/food-tools";
-import { saveCalculatedMeal } from "@/app/lib/actions/meals";
+import { ingredientPortion, type MealDraft } from "@/app/lib/meal-draft";
 import FoodPicker from "./FoodPicker";
-import LabelFoodForm from "./LabelFoodForm";
+const LabelFoodForm = dynamic(() => import("./LabelFoodForm"), {
+  loading: () => <p role="status" className="py-4 text-zinc-400">Loading label form...</p>,
+});
 import { mealInput } from "@/app/lib/validation";
 type State = Awaited<ReturnType<typeof getFoodToolsState>>;
 type Suggestions = Awaited<ReturnType<typeof getPantrySuggestions>>;
@@ -24,19 +27,24 @@ const field =
 const command =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-3 font-bold text-black disabled:opacity-50";
 export default function FoodTools({
-  date,
   remainingCalories,
   remainingProtein,
-  onSave,
+  onUseMeal,
+  mode,
+  active: visible,
+  onBusyChange,
+  resetToken,
 }: {
-  date: string;
   remainingCalories: number | null;
   remainingProtein: number | null;
-  onSave: () => Promise<void>;
+  onUseMeal: (draft: MealDraft) => void;
+  mode: "calculator" | "pantry";
+  active: boolean;
+  onBusyChange: (busy: boolean) => void;
+  resetToken: number;
 }) {
   const toolsRef = useRef<HTMLElement>(null);
   const [state, setState] = useState<State | null>(null);
-  const [mode, setMode] = useState("calculator");
   const [showLabel, setShowLabel] = useState(false);
   const [portions, setPortions] = useState<FoodPortion[]>([]);
   const [records, setRecords] = useState<FoodSummary[]>([]);
@@ -62,6 +70,14 @@ export default function FoodTools({
   const busy = actionBusy || labelSaving;
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => { setPortions([]); setName(""); setShowLabel(false); }, 0);
+    return () => clearTimeout(timer);
+  }, [resetToken]);
+  useEffect(() => {
+    onBusyChange(busy);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
   useEffect(() => {
     let active = true;
     getFoodToolsState()
@@ -113,7 +129,7 @@ export default function FoodTools({
   const suggestions =
     suggestionResult?.requestKey === requestKey ? suggestionResult : null;
   useEffect(() => {
-    if (mode !== "pantry") return;
+    if (!visible || mode !== "pantry") return;
     let active = true;
     if (!text.trim() && !idsKey) {
       setTimeout(() => {
@@ -162,6 +178,7 @@ export default function FoodTools({
       clearTimeout(timer);
     };
   }, [
+    visible,
     mode,
     text,
     idsKey,
@@ -242,31 +259,6 @@ export default function FoodTools({
           Add label food
         </button>
       </div>
-      <div
-        role="tablist"
-        aria-label="Food tools"
-        className="mb-5 flex gap-4 border-b border-zinc-800"
-      >
-        {[
-          ["calculator", "Meal calculator"],
-          ["pantry", "Pantry ideas"],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            role="tab"
-            disabled={busy}
-            aria-selected={mode === value}
-            onClick={() => {
-              setMode(value);
-              setError("");
-              setMessage("");
-            }}
-            className={`border-b-2 py-3 text-sm font-semibold ${mode === value ? "border-yellow-500 text-yellow-500" : "border-transparent text-zinc-400"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       {error && (
         <p role="alert" className="mb-4 text-red-400">
           {error}{" "}
@@ -315,16 +307,13 @@ export default function FoodTools({
             event.preventDefault();
             if (validTotals)
               action(async () => {
-                await saveCalculatedMeal({ date, name, mealType, portions });
-                await onSave();
-                setPortions([]);
-                setName("");
-                setMessage("Calculated meal saved.");
+                onUseMeal({ name, mealType, portions, foods: records, portion: ingredientPortion(portions, records), ...sumFood(portions, records) });
               });
           }}
         >
           <fieldset disabled={busy} className="min-w-0 space-y-4">
             <h2 className="text-xl font-semibold">Meal calculator</h2>
+            <p className="text-sm text-zinc-400">Find each food below and tap it to add it. Enter the weight you ate, then send the totals to Add meal for a final review.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm text-zinc-400">
                 Calculated meal name
@@ -481,7 +470,7 @@ export default function FoodTools({
             </p>
             <button disabled={!validTotals} className={command}>
               <Save className="h-4 w-4" />
-              {busy ? "Saving..." : "Save calculated meal"}
+              Save to Add meal
             </button>
           </fieldset>
         </form>
@@ -791,18 +780,7 @@ export default function FoodTools({
                 <button
                   disabled={busy}
                   onClick={() => {
-                    setRecords(idea.foods);
-                    setPortions(idea.ingredients);
-                    setName(idea.name.slice(0, 160));
-                    setMode("calculator");
-                    setError("");
-                    setMessage("");
-                    requestAnimationFrame(() =>
-                      toolsRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      }),
-                    );
+                    onUseMeal({ name: idea.name.slice(0, 160), mealType, portions: idea.ingredients, foods: idea.foods, portion: ingredientPortion(idea.ingredients, idea.foods), ...sumFood(idea.ingredients, idea.foods) });
                   }}
                   className={command + " mt-4"}
                 >

@@ -4,18 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getWorkoutHistory } from "@/app/lib/actions/workouts";
+import { getActivities } from "@/app/lib/actions/activities";
+import ActivityHistory from "../ActivityHistory";
+import { requestJson } from "@/app/lib/http";
 
 export default function WorkoutHistory() {
   const [logs, setLogs] = useState<
     Awaited<ReturnType<typeof getWorkoutHistory>>
   >([]);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<Awaited<ReturnType<typeof getActivities>>>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    getWorkoutHistory()
-      .then((data) => {
-        if (active) setLogs(data);
+    Promise.all([getWorkoutHistory(), requestJson<Awaited<ReturnType<typeof getActivities>>>("/api/workout-activities", { cache: "no-store" })])
+      .then(([data, extra]) => {
+        if (active) { setLogs(data); setActivities(extra); }
       })
       .catch(() => {
         if (active) setError("Unable to load your workout history.");
@@ -49,11 +53,12 @@ export default function WorkoutHistory() {
           {error}
         </p>
       )}
+      {!loading && activities.length > 0 && <section className="mb-6"><h2 className="text-xl font-semibold">Other exercises and cardio</h2><ActivityHistory activities={activities} /></section>}
       {loading ? (
         <p role="status" className="text-zinc-400">
           Loading sessions...
         </p>
-      ) : !logs.length && !error ? (
+      ) : !logs.length && !activities.length && !error ? (
         <p className="text-zinc-400">No sessions saved yet.</p>
       ) : (
         <div className="divide-y divide-zinc-800">

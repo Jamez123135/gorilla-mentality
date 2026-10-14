@@ -85,6 +85,37 @@ separately from the browser suite.
 
 ## Member Tools
 
+The member hub uses a persistent desktop sidebar and four primary mobile
+shortcuts. Nutrition starts with daily totals and meals, followed by Add meal,
+Meal calculator, and Pantry ideas. The calculator's **Save to Add meal** and
+pantry's **Use meal idea** fill the Add meal form for review; only the final
+**Add meal** button logs food. Calculated meals retain their ingredient/source
+snapshots and are recalculated on the server when added. Food cards can be
+tapped directly, with a named search field and optional food-group filter.
+Advanced tools and label scanning
+load on demand; food searches and diary reads can be cancelled without
+occupying the meal-save action queue. Confirmed saves update the diary from
+the returned record. See the [member experience research and local performance
+measurements](docs/member-experience-research.md) for the design rationale,
+sources, validation coverage, and remaining performance limits.
+
+Workouts also supports **Log another exercise** and **Log cardio**, including
+members who have not generated a routine. Additional exercise entries record
+each performed set, reps and lb/kg weights; cardio records minutes and optional
+distance in km/miles. Entries persist in `workout_activities`, appear in workout
+history, and contribute to separate overview activity/cardio totals. They do
+not advance the planned split or change its progression. Retries reuse the
+draft ID, and every read/write/delete is scoped to the signed-in member.
+Additional-activity history currently shows the most recent 100 entries.
+
+Movement photo references use 55 selected exercises from the pinned
+[free-exercise-db](https://github.com/yuhonas/free-exercise-db) public-domain
+dataset. Local originals and license/source notices live in
+`public/exercise-references/`; CSS displays them in black and white. Each
+reference identifies the photographed variation and links its source. Run
+`node scripts/import-exercise-references.mjs` to reproduce the assets. The
+photos load lazily, and users can open a reference to compare its positions.
+
 - Food diary: add/edit/delete meals, portions, calories, protein, carbs, and fat;
   choose a date and compare totals with intake targets. Previous manual daily
   totals are retained alongside new meals until the member deletes them.

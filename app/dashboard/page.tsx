@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getDashboard } from "@/app/lib/actions/dashboard";
 import { localDate } from "@/app/lib/validation";
+import MemberLoading from "@/app/components/ui/MemberLoading";
 
 export default function Dashboard() {
   const { user } = useUser();
@@ -46,11 +47,7 @@ export default function Dashboard() {
     };
   }, []);
   if (loading)
-    return (
-      <p role="status" className="p-8 text-zinc-400">
-        Loading dashboard...
-      </p>
-    );
+    return <MemberLoading label="Loading dashboard..." />;
   const profile = data?.profile;
   const suggestions = [
     !profile?.trainingDays
@@ -168,6 +165,7 @@ export default function Dashboard() {
               </Link>
             ))}
           </nav>
+          <p className="mb-6 text-sm text-zinc-400">Additional activities this week: {data.activitiesThisWeek} / Cardio: {Math.round(data.cardioMinutesThisWeek * 10) / 10} min</p>
           {suggestions.length > 0 && (
             <section className="border-t border-zinc-800 py-6">
               <h2 className="mb-2 text-xl font-semibold">Next Steps</h2>

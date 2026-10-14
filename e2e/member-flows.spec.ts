@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 
 test.describe("free member tracking", () => {
+  test.use({ actionTimeout: 15000 });
   test.skip(
     !process.env.DATABASE_URL?.includes("127.0.0.1:54329") ||
       !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_"),
@@ -36,6 +37,8 @@ test.describe("free member tracking", () => {
   test("signs in, saves meals, workouts, and progress, then signs out", async ({
     page,
   }, testInfo) => {
+    // This flow spans intake, meals, workouts, history, photos and sign-out.
+    test.setTimeout(120000);
     await page.goto("/login");
     await expect(
       page.getByText("Member sign-in is temporarily unavailable."),
@@ -120,8 +123,9 @@ test.describe("free member tracking", () => {
     await page
       .getByRole("link", { name: "Workout history", exact: true })
       .click();
-    await expect(page.locator("summary")).toContainText("1 set");
-    await page.locator("summary").click();
+    await expect(page.getByRole("heading", { name: "Workout History", exact: true })).toBeVisible();
+    await expect(page.locator("main summary")).toContainText("1 set");
+    await page.locator("main summary").click();
     await expect(
       page.getByRole("cell", { name: "100", exact: true }),
     ).toBeVisible();
@@ -169,6 +173,7 @@ test.describe("free member tracking", () => {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    if (testInfo.project.name !== "desktop") await page.getByText("More member tools", { exact: true }).click();
     await page.getByRole("button", { name: "Sign Out" }).click();
     await expect(page).toHaveURL(/\/login/);
     await page.goto("/dashboard");

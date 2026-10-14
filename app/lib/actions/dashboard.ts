@@ -17,9 +17,16 @@ export async function getDashboard(
   z.iso.datetime().parse(weekStart);
   z.iso.datetime().parse(weekEnd);
   const logDate = new Date(`${date}T00:00:00.000Z`);
-  const [profile, meals, legacy, sessions, weight] = await Promise.all([
+  const activityStart = new Date(logDate);
+  activityStart.setUTCDate(activityStart.getUTCDate() - ((activityStart.getUTCDay() + 6) % 7));
+  const activityEnd = new Date(activityStart);
+  activityEnd.setUTCDate(activityEnd.getUTCDate() + 7);
+  const [profile, meals, legacy, sessions, weight, activitySummary] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId } }),
-    prisma.mealEntry.findMany({ where: { userId, logDate } }),
+    prisma.mealEntry.findMany({
+      where: { userId, logDate },
+      select: { calories: true, protein: true, carbs: true, fat: true },
+    }),
     prisma.nutritionLog.findUnique({
       where: { userId_logDate: { userId, logDate } },
     }),
@@ -34,6 +41,10 @@ export async function getDashboard(
       where: { userId },
       orderBy: { logDate: "desc" },
     }),
+    prisma.workoutActivity.aggregate({
+      where: { userId, logDate: { gte: activityStart, lt: activityEnd } },
+      _count: { _all: true }, _sum: { minutes: true },
+    }),
   ]);
   return {
     profile,
@@ -41,5 +52,7 @@ export async function getDashboard(
     mealCount: meals.length,
     workoutsThisWeek: sessions,
     latestWeight: weight?.weightLb ?? null,
+    activitiesThisWeek: activitySummary._count._all,
+    cardioMinutesThisWeek: activitySummary._sum.minutes ?? 0,
   };
 }

@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Save, X } from "lucide-react";
 import { saveLabelFood } from "@/app/lib/actions/food-tools";
 import { allergens, roles, type FoodSummary } from "@/app/lib/food-types";
-import LabelScanner, { type ScannedValues } from "./LabelScanner";
+import dynamic from "next/dynamic";
+import type { ScannedValues } from "./LabelScanner";
+const LabelScanner = dynamic(() => import("./LabelScanner"), {
+  loading: () => <p role="status" className="py-4 text-sm text-zinc-400">Loading label scanner...</p>,
+});
 import { labelFields, type LabelBasis } from "@/app/lib/nutrition-label";
 import { labelFoodInput } from "@/app/lib/food-input";
 const field =

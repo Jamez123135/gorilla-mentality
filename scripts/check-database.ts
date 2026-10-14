@@ -11,6 +11,7 @@ Promise.all([
   prisma.mealEntry.findFirst(),
   prisma.weightEntry.findFirst(),
   prisma.workoutSession.findFirst(),
+  prisma.workoutActivity.findFirst(),
   prisma.communityPost.findFirst(),
   prisma.communityComment.findFirst(),
   prisma.communityLike.findFirst(),

@@ -5,7 +5,6 @@ import { prisma } from "@/app/lib/prisma";
 import {
   catalogCount,
   catalogCategories,
-  searchCatalog,
   resolvePantry,
   officialFood,
 } from "@/app/lib/food-catalog";
@@ -17,6 +16,7 @@ import {
   foodIdInput,
 } from "@/app/lib/food-input";
 import { buildPantryIdeas } from "@/app/lib/pantry-planner";
+import { findMemberFoods } from "@/app/lib/food-search";
 async function member() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -24,12 +24,10 @@ async function member() {
 }
 export async function getFoodToolsState() {
   const userId = await member();
-  const rows = await prisma.customFood.findMany({
-    where: { userId },
-    orderBy: { name: "asc" },
-    take: 200,
-  });
-  const pantry = await prisma.memberPantry.findUnique({ where: { userId } });
+  const [rows, pantry] = await Promise.all([
+    prisma.customFood.findMany({ where: { userId }, orderBy: { name: "asc" }, take: 200 }),
+    prisma.memberPantry.findUnique({ where: { userId } }),
+  ]);
   const preferences = pantryPreferencesInput.safeParse(
     pantry?.preferences ?? {},
   );
@@ -42,7 +40,9 @@ export async function getFoodToolsState() {
     count: catalogCount,
     categories: catalogCategories,
     personalFoods: rows.map(labelFood),
-    pantry: await resolveOwnedFoods(userId, validIds),
+    pantry: validIds.map((id) => id.startsWith("custom:")
+      ? labelFood(rows.find((row) => id === `custom:${row.id}`)!)
+      : officialFood(id)!),
     preferences: preferences.success
       ? preferences.data
       : pantryPreferencesInput.parse({}),
@@ -52,30 +52,7 @@ export async function searchFoods(query: string, category = "") {
   const userId = await member();
   const text = z.string().max(160).parse(query);
   z.string().max(100).parse(category);
-  const personal =
-    category && category !== "Personal label foods"
-      ? []
-      : await prisma.customFood.findMany({
-          where: {
-            userId,
-            ...(text
-              ? {
-                  OR: [
-                    { name: { contains: text, mode: "insensitive" } },
-                    { brand: { contains: text, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
-          },
-          take: 20,
-          orderBy: { name: "asc" },
-        });
-  return [
-    ...personal.map(labelFood),
-    ...(category === "Personal label foods"
-      ? []
-      : searchCatalog(text, category)),
-  ].slice(0, 40);
+  return findMemberFoods(userId, text.trim(), category);
 }
 export async function saveLabelFood(input: unknown) {
   const userId = await member();

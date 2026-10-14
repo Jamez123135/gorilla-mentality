@@ -5,6 +5,9 @@ import Link from "next/link";
 import { CheckCircle2, Save, ArrowRight } from "lucide-react";
 import { getWorkout, saveWorkout } from "@/app/lib/actions/workouts";
 import { workoutFeedback } from "@/app/lib/workout-feedback";
+import MemberLoading from "@/app/components/ui/MemberLoading";
+import ActivityLogger from "./ActivityLogger";
+import ExerciseReference from "./ExerciseReference";
 
 type SetLog = { weight: string; reps: string; completed: boolean };
 type Workout = Omit<
@@ -198,14 +201,12 @@ export default function WorkoutLogger() {
   }
 
   if (loading)
-    return (
-      <p role="status" className="p-8 text-zinc-400">
-        Loading workout...
-      </p>
-    );
+    return <MemberLoading label="Loading workout..." />;
   if (!workout)
     return (
-      <div className="p-8">
+      <main className="mx-auto max-w-3xl p-4 md:p-8">
+        <h1 className="mb-5 text-3xl font-bold">Your workouts</h1>
+        <ActivityLogger />
         <p role={error ? "alert" : "status"}>
           {error || "Complete your intake to create a workout plan."}
         </p>
@@ -215,7 +216,7 @@ export default function WorkoutLogger() {
         >
           Starter intake
         </Link>
-      </div>
+      </main>
     );
   return (
     <main className="mx-auto max-w-3xl p-4 md:p-8">
@@ -271,6 +272,7 @@ export default function WorkoutLogger() {
           {saving ? "Saving..." : "Save Session"}
         </button>
       </header>
+      <ActivityLogger />
       {error && (
         <p role="alert" className="mb-4 text-red-400">
           {error}
@@ -312,6 +314,7 @@ export default function WorkoutLogger() {
             className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 md:p-6"
           >
             <h2 className="text-xl font-bold">{ex.name}</h2>
+            <ExerciseReference name={ex.name} />
             <p className="mt-1 text-sm text-zinc-400">
               Target: {ex.progression.reps}
               {ex.reps.includes("sec") ? "" : " reps"}

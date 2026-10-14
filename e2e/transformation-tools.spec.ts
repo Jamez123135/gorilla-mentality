@@ -3,6 +3,7 @@ import { clerk } from "@clerk/testing/playwright";
 import { createClerkClient } from "@clerk/backend";
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { reviewAndAddMeal } from "./nutrition-helpers";
 
 test.describe("transformation tools", () => {
   test.skip(
@@ -122,17 +123,13 @@ test.describe("transformation tools", () => {
     expect(await database.workoutLog.count({ where: { userId } })).toBe(1);
 
     await page.goto("/dashboard/nutrition");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
     await page.getByLabel("Calculated meal name").fill("Weighed chicken");
-    await page
-      .getByLabel("Food ingredient", { exact: true })
-      .selectOption("chicken");
-    await page
-      .getByRole("button", { name: "Add ingredient", exact: true })
-      .click();
+    await page.getByTestId("pick-meal-chicken").click();
     await expect(page.getByText(/Estimated: 165 kcal/)).toBeVisible();
-    await page.getByRole("button", { name: "Save calculated meal" }).click();
+    await reviewAndAddMeal(page);
     await expect(
-      page.getByText("Calculated meal saved.", { exact: true }),
+      page.getByText("Meal saved.", { exact: true }),
     ).toBeVisible();
     await page.reload();
     await expect(
@@ -148,11 +145,11 @@ test.describe("transformation tools", () => {
       page.getByRole("heading", { name: "Chicken, rice and broccoli bowl" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Use meal idea" }).first().click();
-    await expect(page.getByLabel("Calculated meal name")).toHaveValue(
+    await expect(page.getByLabel("Food or meal")).toHaveValue(
       "Chicken, rice and broccoli bowl",
     );
     await expect(
-      page.getByRole("button", { name: /Remove ingredient/ }),
+      page.getByRole("tabpanel", { name: "Add meal" }).locator("li"),
     ).toHaveCount(3);
     await page.screenshot({
       path: info.outputPath("calculator.png"),

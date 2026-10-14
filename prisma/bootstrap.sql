@@ -108,4 +108,12 @@ CREATE TABLE IF NOT EXISTS "member_pantries" (
   "userId" TEXT PRIMARY KEY REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   "updatedAt" TIMESTAMP(3) NOT NULL, "foodIds" TEXT[] NOT NULL, "preferences" JSONB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS "workout_activities" (
+  "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "logDate" DATE NOT NULL,
+  "kind" TEXT NOT NULL, "name" TEXT NOT NULL, "sets" JSONB,
+  "minutes" DOUBLE PRECISION, "distance" DOUBLE PRECISION, "distanceUnit" TEXT, "notes" TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "workout_activities_id_userId_key" ON "workout_activities"("id", "userId");
+CREATE INDEX IF NOT EXISTS "workout_activities_userId_logDate_idx" ON "workout_activities"("userId", "logDate");
 COMMIT;

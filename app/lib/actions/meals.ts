@@ -5,7 +5,6 @@ import { prisma } from "@/app/lib/prisma";
 import { mealInput, nutritionInput } from "@/app/lib/validation";
 import { z } from "zod";
 import { sumFood } from "@/app/lib/food-types";
-import { resolveOwnedFoods } from "@/app/lib/owned-foods";
 import { Prisma } from "@prisma/client";
 
 export async function saveCalculatedMeal(input: unknown) {
@@ -27,6 +26,7 @@ export async function saveCalculatedMeal(input: unknown) {
         .max(30),
     })
     .parse(input);
+  const { resolveOwnedFoods } = await import("@/app/lib/owned-foods");
   const foods = await resolveOwnedFoods(
     userId,
     data.portions.map((item) => item.foodId),
@@ -54,7 +54,7 @@ export async function saveCalculatedMeal(input: unknown) {
     create: { id: userId },
     update: {},
   });
-  await prisma.mealEntry.create({
+  const savedMeal = await prisma.mealEntry.create({
     data: {
       ...meal,
       userId,
@@ -65,7 +65,7 @@ export async function saveCalculatedMeal(input: unknown) {
       })),
     },
   });
-  return { saved: true };
+  return { saved: true, meal: savedMeal };
 }
 
 export async function getNutritionDiary(date: string) {
@@ -74,7 +74,10 @@ export async function getNutritionDiary(date: string) {
   nutritionInput.parse({ date, calories: 0, protein: 0 });
   const logDate = new Date(`${date}T00:00:00.000Z`);
   const [profile, meals, legacyLog] = await Promise.all([
-    prisma.profile.findUnique({ where: { id: userId } }),
+    prisma.profile.findUnique({
+      where: { id: userId },
+      select: { targetCalories: true, targetProtein: true },
+    }),
     prisma.mealEntry.findMany({
       where: { userId, logDate },
       orderBy: { createdAt: "asc" },
@@ -91,21 +94,23 @@ export async function saveMeal(input: unknown) {
   if (!userId) throw new Error("Unauthorized");
   const { id, date, ...values } = mealInput.parse(input);
   const logDate = new Date(`${date}T00:00:00.000Z`);
+  let savedMeal;
   if (id) {
     const result = await prisma.mealEntry.updateMany({
       where: { id, userId, logDate },
       data: { ...values, ingredients: Prisma.DbNull },
     });
     if (!result.count) throw new Error("Meal not found");
+    savedMeal = await prisma.mealEntry.findFirstOrThrow({ where: { id, userId, logDate } });
   } else {
     await prisma.profile.upsert({
       where: { id: userId },
       update: {},
       create: { id: userId },
     });
-    await prisma.mealEntry.create({ data: { ...values, userId, logDate } });
+    savedMeal = await prisma.mealEntry.create({ data: { ...values, userId, logDate } });
   }
-  return { saved: true };
+  return { saved: true, meal: savedMeal };
 }
 
 export async function deleteMeal(id: string) {

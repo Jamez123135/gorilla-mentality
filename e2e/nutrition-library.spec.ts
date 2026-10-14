@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { clerk } from "@clerk/testing/playwright";
 import { createClerkClient } from "@clerk/backend";
 import { PrismaClient } from "@prisma/client";
+import { reviewAndAddMeal } from "./nutrition-helpers";
 
 test.describe("international nutrition library", () => {
   test.use({ actionTimeout: 15000 });
@@ -45,18 +46,14 @@ test.describe("international nutrition library", () => {
     await page.goto("/login");
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/dashboard/nutrition");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
     await expect(
       page.getByText("8,104 source-backed foods + your personal labels"),
     ).toBeVisible();
     await page
-      .getByLabel("Search food ingredients", { exact: true })
+      .getByLabel("Find a food", { exact: true })
       .fill("quinoa");
-    await page
-      .getByLabel("Food ingredient", { exact: true })
-      .selectOption("fdc-168917");
-    await page
-      .getByRole("button", { name: "Add ingredient", exact: true })
-      .click();
+    await page.getByTestId("pick-meal-fdc-168917").click();
     await page.getByLabel("Ingredient 1 measure").selectOption("28.349523125");
     await expect(page.getByLabel("Ingredient 1 grams")).toHaveValue(
       "28.349523125",
@@ -67,16 +64,16 @@ test.describe("international nutrition library", () => {
       page.getByText("Enter a weight above 0 and up to 2,000g."),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Save calculated meal" }),
+      page.getByRole("button", { name: "Save to Add meal" }),
     ).toBeDisabled();
     await page.getByLabel("Ingredient 1 grams").fill("100");
     await page.getByLabel("Calculated meal name").fill("Measured quinoa");
-    await page.getByRole("button", { name: "Save calculated meal" }).click();
+    await reviewAndAddMeal(page);
     await expect(
-      page.getByText("Calculated meal saved.", { exact: true }),
+      page.getByText("Meal saved.", { exact: true }),
     ).toBeVisible();
     await page
-      .getByLabel("Search food ingredients", { exact: true })
+      .getByLabel("Find a food", { exact: true })
       .fill("totallyunknownfoodxyz");
     await expect(
       page.getByText(
@@ -84,8 +81,8 @@ test.describe("international nutrition library", () => {
       ),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Add ingredient", exact: true }),
-    ).toBeDisabled();
+      page.getByTestId("pick-meal-fdc-168917"),
+    ).toHaveCount(0);
 
     await page
       .getByRole("button", { name: "Add label food", exact: true })
@@ -126,9 +123,9 @@ test.describe("international nutrition library", () => {
     ).toBe(false);
     await page.getByLabel("Ingredient 1 grams").fill("50");
     await page.getByLabel("Calculated meal name").fill("My labelled meal");
-    await page.getByRole("button", { name: "Save calculated meal" }).click();
+    await reviewAndAddMeal(page);
     await expect(
-      page.getByText("Calculated meal saved.", { exact: true }),
+      page.getByText("Meal saved.", { exact: true }),
     ).toBeVisible();
     const custom = await database.customFood.findFirstOrThrow({
       where: { userId, name: labelName },
@@ -266,12 +263,13 @@ test.describe("international nutrition library", () => {
     ).toBeNull();
     expect(errors).toEqual([]);
   });
-  test("keeps the selected diary day during a delayed calculated meal save", async ({
+  test("locks the selected diary day during the final calculated meal save", async ({
     page,
   }) => {
     await page.goto("/login");
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/dashboard/nutrition");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
     await expect(
       page.getByText("8,104 source-backed foods + your personal labels"),
     ).toBeVisible();
@@ -280,12 +278,8 @@ test.describe("international nutrition library", () => {
     await page
       .getByLabel("Calculated meal name")
       .fill("Delayed date-check meal");
-    await page
-      .getByLabel("Food ingredient", { exact: true })
-      .selectOption("chicken");
-    await page
-      .getByRole("button", { name: "Add ingredient", exact: true })
-      .click();
+    await page.getByTestId("pick-meal-chicken").click();
+    await page.getByRole("button", { name: "Save to Add meal", exact: true }).click();
     let delayed = false;
     await page.route("**/dashboard/nutrition", async (route) => {
       if (route.request().method() === "POST" && !delayed) {
@@ -294,15 +288,17 @@ test.describe("international nutrition library", () => {
       }
       await route.continue();
     });
-    const refreshedOldDate = page.waitForResponse(
+    const savedOldDate = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
         (response.request().postData() ?? "").includes(originalDate) &&
-        !(response.request().postData() ?? "").includes("portions"),
+        (response.request().postData() ?? "").includes("portions"),
     );
-    await page.getByRole("button", { name: "Save calculated meal" }).click();
+    await page.getByRole("button", { name: "Add meal", exact: true }).click();
+    await expect(page.getByLabel("Food diary date")).toBeDisabled();
+    await savedOldDate;
+    await expect(page.getByText("Meal saved.", { exact: true })).toBeVisible();
     await page.getByLabel("Food diary date").fill(nextDate);
-    await refreshedOldDate;
     await expect(page.getByLabel("Food diary date")).toHaveValue(nextDate);
     await expect(page.getByText("No meals logged for this day.")).toBeVisible();
     await expect(
@@ -317,5 +313,52 @@ test.describe("international nutrition library", () => {
         .toISOString()
         .slice(0, 10),
     ).toBe(originalDate);
+  });
+
+  test("loads advanced tools on demand, keeps drafts, and cancels stale food searches", async ({ page }, info) => {
+    await page.goto("/login");
+    await clerk.signIn({ page, emailAddress: email });
+    const searches: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/foods/search")) searches.push(request.url());
+    });
+    await page.goto("/dashboard/nutrition");
+    await expect(page.getByLabel("Food or meal")).toBeVisible();
+    expect(searches).toEqual([]);
+    await page.getByLabel("Food or meal").fill("Unsaved quick entry");
+    await page.getByRole("tab", { name: "Add meal", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Meal calculator", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await page.getByLabel("Calculated meal name").fill("Unsaved weighed meal");
+    await page.getByRole("tab", { name: "Add meal", exact: true }).click();
+    await expect(page.getByLabel("Food or meal")).toHaveValue("Unsaved quick entry");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
+    await expect(page.getByLabel("Calculated meal name")).toHaveValue("Unsaved weighed meal");
+    await page.getByLabel("Find a food", { exact: true }).fill("quinoa");
+    await expect(page.getByTestId("pick-meal-fdc-168917")).toBeVisible();
+    await page.getByRole("tab", { name: "Add meal", exact: true }).click();
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
+    await expect(page.getByLabel("Find a food", { exact: true })).toHaveValue("quinoa");
+
+    let releaseSearch!: () => void;
+    const delayed = new Promise<void>((resolve) => { releaseSearch = resolve; });
+    await page.route("**/api/foods/search?**", async (route) => {
+      if (new URL(route.request().url()).searchParams.get("q") === "chicken") await delayed;
+      await route.continue().catch(() => {});
+    });
+    const staleSearch = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/foods/search" && new URL(request.url()).searchParams.get("q") === "chicken");
+    await page.getByLabel("Find a food", { exact: true }).fill("chicken");
+    await staleSearch;
+    await page.getByLabel("Find a food", { exact: true }).fill("quinoa");
+    await expect(page.getByTestId("pick-meal-fdc-168917")).toBeVisible();
+    releaseSearch();
+    await expect(page.getByTestId("pick-meal-fdc-168917")).toBeEnabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (info.project.name !== "desktop") {
+      await expect(page.getByRole("navigation", { name: "Member shortcuts", exact: true })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "Member shortcuts", exact: true }).getByRole("link", { name: "Nutrition", exact: true })).toHaveAttribute("aria-current", "page");
+    }
+    await page.screenshot({ path: info.outputPath("nutrition-workspace.png"), fullPage: true });
   });
 });

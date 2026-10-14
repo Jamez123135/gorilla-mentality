@@ -129,15 +129,41 @@ export function officialFood(id: string) {
   const food = byId.get(id);
   return food ? publicFood(food) : null;
 }
+const searchDocuments = catalogFoods.map((food) => ({
+  food,
+  name: normalize(food.name),
+  aliases: food.aliases.map(normalize),
+  text: normalize([food.name, ...food.aliases].join(" ")),
+}));
+const searchCache = new Map<string, string[]>();
 export function searchCatalog(
   query: string,
   category = "",
   take = 40,
 ): FoodSummary[] {
   const normalized = normalize(query);
+  const limit = Math.max(0, Math.min(40, take));
+  const key = JSON.stringify([normalized, category]);
+  const cached = searchCache.get(key);
+  if (cached) {
+    searchCache.delete(key);
+    searchCache.set(key, cached);
+    return cached.slice(0, limit).map((id) => publicFood(byId.get(id)!));
+  }
   const terms = normalized.split(" ").filter(Boolean);
+  // Literal food/alias matches avoid a full fuzzy scan for common searches.
+  // Keep fuzzy matching as a fallback for misspellings and unfamiliar spelling.
+  const direct = normalized ? searchDocuments.filter((item) =>
+    (!category || item.food.category === category) && terms.every((term) => item.text.includes(term)),
+  ).sort((a, b) => {
+    const score = (item: typeof a) =>
+      (item.name === normalized || item.aliases.includes(normalized) ? 0
+        : item.name.includes(normalized) ? 1 : 2) +
+      (item.food.recipeEligible ? 0 : 0.1);
+    return score(a) - score(b) || a.name.length - b.name.length;
+  }).map((item) => item.food) : [];
   const ranked =
-    terms.length > 1
+    !normalized || direct.length ? [] : terms.length > 1
       ? index.search({
           $and: terms.map<Expression>((term) => ({
             $or: ["name", "aliases"].map<Expression>((key) => ({
@@ -147,7 +173,7 @@ export function searchCatalog(
         })
       : index.search(query.trim());
   const precise =
-    terms.length > 1
+    !direct.length && terms.length > 1
       ? index
           .search(query.trim())
           .filter((result) => (result.score ?? 1) < 0.001)
@@ -163,6 +189,7 @@ export function searchCatalog(
   const matches = normalized
     ? [
         ...(preferred ? [preferred] : []),
+        ...direct,
         ...precise,
         ...ranked.map((result) => result.item),
       ]
@@ -171,15 +198,18 @@ export function searchCatalog(
         ...catalogFoods,
       ];
   const seen = new Set<string>();
-  return matches
+  const ids = matches
     .filter(
       (food) =>
         (!category || food.category === category) &&
         !seen.has(food.id) &&
         Boolean(seen.add(food.id)),
     )
-    .slice(0, Math.min(40, take))
-    .map(publicFood);
+    .slice(0, 40)
+    .map((food) => food.id);
+  searchCache.set(key, ids);
+  if (searchCache.size > 128) searchCache.delete(searchCache.keys().next().value!);
+  return ids.slice(0, limit).map((id) => publicFood(byId.get(id)!));
 }
 export function resolvePantry(text: string, personal: FoodSummary[] = []) {
   const matched: FoodSummary[] = [];

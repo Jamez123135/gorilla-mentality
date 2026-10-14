@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   mealEntry: {
     findMany: vi.fn(),
     updateMany: vi.fn(),
+    findFirstOrThrow: vi.fn(),
     create: vi.fn(),
     deleteMany: vi.fn(),
   },
@@ -81,6 +82,20 @@ describe("member diary", () => {
     );
     expect(mocks.mealEntry.deleteMany).toHaveBeenCalledWith({
       where: { id: "foreign", userId: "owner" },
+    });
+  });
+  it("returns the persisted entry for immediate diary updates after creating and editing", async () => {
+    const persisted = {
+      id: "saved-meal", userId: "owner", logDate: new Date(`${meal.date}T00:00:00.000Z`),
+      ...meal, ingredients: null, createdAt: new Date(), updatedAt: new Date(),
+    };
+    mocks.mealEntry.create.mockResolvedValue(persisted);
+    expect((await saveMeal(meal)).meal).toEqual(persisted);
+    mocks.mealEntry.updateMany.mockResolvedValue({ count: 1 });
+    mocks.mealEntry.findFirstOrThrow.mockResolvedValue({ ...persisted, calories: 700 });
+    expect((await saveMeal({ ...meal, id: persisted.id, calories: 700 })).meal.calories).toBe(700);
+    expect(mocks.mealEntry.findFirstOrThrow).toHaveBeenCalledWith({
+      where: { id: persisted.id, userId: "owner", logDate: persisted.logDate },
     });
   });
   it("normalizes kilograms and updates a single daily weight entry", async () => {

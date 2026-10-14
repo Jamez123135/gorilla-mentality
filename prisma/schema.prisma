@@ -35,6 +35,7 @@ model Profile {
   mealEntries       MealEntry[]
   weightEntries     WeightEntry[]
   workoutSessions   WorkoutSession[]
+  workoutActivities WorkoutActivity[]
   communityPosts    CommunityPost[]
   communityComments CommunityComment[]
   communityLikes    CommunityLike[]
@@ -179,6 +180,25 @@ model WorkoutSession {
   @@unique([userId, workoutDate])
   @@index([userId, planKey, workoutDate])
   @@map("workout_sessions")
+}
+
+model WorkoutActivity {
+  id           String   @id @default(uuid())
+  userId       String
+  createdAt    DateTime @default(now())
+  logDate      DateTime @db.Date
+  kind         String
+  name         String
+  sets         Json?
+  minutes      Float?
+  distance     Float?
+  distanceUnit String?
+  notes        String?
+  profile      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([id, userId])
+  @@index([userId, logDate])
+  @@map("workout_activities")
 }
 
 model CommunityPost {

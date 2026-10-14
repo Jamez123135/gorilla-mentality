@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   memberPantry: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
-  mealEntry: { create: vi.fn(), updateMany: vi.fn() },
+  mealEntry: { create: vi.fn(), updateMany: vi.fn(), findFirstOrThrow: vi.fn() },
   transaction: vi.fn(),
 }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
@@ -142,6 +142,16 @@ describe("private nutrition tools", () => {
     expect(write.where).toEqual({ userId: "owner" });
     expect(write.create.foodIds).toEqual(["rice"]);
     expect(write.create.preferences.diet).toBe("vegan");
+  });
+  it("never caches another member's private foods with shared catalog results", async () => {
+    mocks.customFood.findMany.mockResolvedValue([row]);
+    const first = await searchFoods("rice");
+    expect(first.some((food) => food.id === `custom:${id}`)).toBe(true);
+    mocks.auth.mockResolvedValue({ userId: "second-owner" });
+    mocks.customFood.findMany.mockResolvedValue([]);
+    const second = await searchFoods("rice");
+    expect(second.some((food) => food.id === `custom:${id}`)).toBe(false);
+    expect(mocks.customFood.findMany.mock.calls.at(-1)![0].where.userId).toBe("second-owner");
   });
   it("keeps source and ingredient snapshots so deletion cannot alter past meals", async () => {
     mocks.customFood.findMany.mockResolvedValue([row]);

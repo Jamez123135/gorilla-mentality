@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   profile: { upsert: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
@@ -35,6 +35,8 @@ import {
 import { saveRoutinePreferences } from "@/app/lib/actions/routine";
 import { saveCalculatedMeal } from "@/app/lib/actions/meals";
 const id = "8b8376ca-69c7-4e12-bd3e-36f0d0b4e756";
+// Loading the source catalog is fixture setup, outside the action assertion's timeout.
+beforeAll(async () => { await import("@/app/lib/owned-foods"); });
 const post = {
   body: "Made progress today",
   authorName: "Member",

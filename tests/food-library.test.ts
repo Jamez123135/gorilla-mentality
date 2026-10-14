@@ -121,6 +121,15 @@ describe("international source-backed food library", () => {
     expect(food("fdc-170686").allergens).not.toContain("wheat");
     expect(food("fdc-170686").allergens).not.toContain("gluten");
   });
+  it("keeps typo support and separates cached searches by category and result limit", () => {
+    expect(searchCatalog("chiken").some((item) => /chicken/i.test(item.name))).toBe(true);
+    const all = searchCatalog("rice");
+    expect(searchCatalog("rice", "", 5)).toEqual(all.slice(0, 5));
+    const category = all[0].category;
+    expect(searchCatalog("rice", category).every((food) => food.category === category)).toBe(true);
+    expect(searchCatalog("rice", "Personal label foods")).toEqual([]);
+    expect(searchCatalog("rice", "", 0)).toEqual([]);
+  });
   it("keeps condiments and baking ingredients out of meal-base optimization", () => {
     for (const id of ["fdc-172473", "fdc-2512377"])
       expect(food(id).recipeEligible).toBe(false);

@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { clerk } from "@clerk/testing/playwright";
 import { createClerkClient } from "@clerk/backend";
 import { PrismaClient } from "@prisma/client";
+import { reviewAndAddMeal } from "./nutrition-helpers";
 test.describe("free on-device nutrition-label scanning", () => {
   test.use({ actionTimeout: 15000 });
   test.skip(
@@ -44,6 +45,7 @@ test.describe("free on-device nutrition-label scanning", () => {
     await page.goto("/login");
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/dashboard/nutrition");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
     await page
       .getByRole("button", { name: "Add label food", exact: true })
       .click();
@@ -131,11 +133,9 @@ test.describe("free on-device nutrition-label scanning", () => {
     await expect(
       page.getByText(/Estimated: 220 kcal \/ P 5g \/ C 35g \/ F 7g/),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Save calculated meal", exact: true })
-      .click();
+    await reviewAndAddMeal(page, false);
     await expect(
-      page.getByText("Calculated meal saved.", { exact: true }),
+      page.getByText("Meal saved.", { exact: true }),
     ).toBeVisible();
     const saved = await database.customFood.findFirstOrThrow({
       where: { userId, name: "Scanned snack" },
@@ -163,6 +163,7 @@ test.describe("free on-device nutrition-label scanning", () => {
     await page.goto("/login");
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/dashboard/nutrition");
+    await page.getByRole("tab", { name: "Meal calculator", exact: true }).click();
     await page
       .getByRole("button", { name: "Add label food", exact: true })
       .click();
